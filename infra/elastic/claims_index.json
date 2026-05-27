@@ -1,0 +1,32 @@
+{
+  "mappings": {
+    "properties": {
+      "claim_id": {"type": "keyword"},
+      "paper_id": {"type": "keyword"},
+      "type": {"type": "keyword"},
+      "raw_text": {"type": "text", "analyzer": "english"},
+      "raw_sentence_id": {"type": "integer"},
+      "specificity": {"type": "keyword"},
+      "cited_ref_ids": {"type": "keyword"},
+      "resolution_status": {"type": "keyword"},
+      "resolved_text": {"type": "text", "analyzer": "english"},
+      "resolution_chain": {
+        "type": "nested",
+        "properties": {
+          "depth": {"type": "integer"},
+          "source_paper_id": {"type": "keyword"},
+          "sentence_ids": {"type": "integer"},
+          "extracted_text": {"type": "text"}
+        }
+      },
+      "terminal_gap_reason": {"type": "keyword"},
+      "confidence": {"type": "float"},
+      "embedding": {
+        "type": "dense_vector",
+        "dims": 384,
+        "index": true,
+        "similarity": "cosine"
+      }
+    }
+  }
+}

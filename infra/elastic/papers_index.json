@@ -1,0 +1,52 @@
+{
+  "mappings": {
+    "properties": {
+      "paper_id": {"type": "keyword"},
+      "source": {"type": "keyword"},
+      "title": {"type": "text", "analyzer": "english"},
+      "authors": {
+        "type": "nested",
+        "properties": {
+          "name": {"type": "text"},
+          "orcid": {"type": "keyword"}
+        }
+      },
+      "year": {"type": "integer"},
+      "venue": {"type": "keyword"},
+      "abstract": {"type": "text", "analyzer": "english"},
+      "abstract_vector": {
+        "type": "dense_vector",
+        "dims": 384,
+        "index": true,
+        "similarity": "cosine"
+      },
+      "methods_text": {"type": "text", "analyzer": "english"},
+      "methods_sentences": {
+        "type": "nested",
+        "properties": {
+          "sentence_id": {"type": "integer"},
+          "text": {"type": "text", "analyzer": "english"},
+          "vector": {
+            "type": "dense_vector",
+            "dims": 384,
+            "index": true,
+            "similarity": "cosine"
+          }
+        }
+      },
+      "references": {
+        "type": "nested",
+        "properties": {
+          "ref_id": {"type": "keyword"},
+          "doi": {"type": "keyword"},
+          "arxiv_id": {"type": "keyword"},
+          "pmc_id": {"type": "keyword"},
+          "raw_citation": {"type": "text"},
+          "resolved": {"type": "boolean"}
+        }
+      },
+      "open_access_url": {"type": "keyword"},
+      "ingested_at": {"type": "date"}
+    }
+  }
+}
