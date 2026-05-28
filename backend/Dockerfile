@@ -27,6 +27,7 @@ RUN pip install --upgrade pip && \
       "beautifulsoup4==4.12.3" "lxml==5.3.0" \
       "arxiv==2.1.3" "crossrefapi==1.6.0" \
       "redis==5.1.1" "structlog==24.4.0" \
+      "aiohttp==3.10.10" \
       "pytest==8.3.3" "pytest-asyncio==0.24.0" "pytest-mock==3.14.0" && \
     if [ "$INSTALL_EMBEDDINGS" = "1" ]; then \
       pip install --index-url https://download.pytorch.org/whl/cpu "torch==2.4.1" && \

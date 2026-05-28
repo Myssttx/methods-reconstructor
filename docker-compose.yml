@@ -53,6 +53,7 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      - ./infra:/app/infra:ro
       - ./.local_storage:/app/.local_storage
     command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 

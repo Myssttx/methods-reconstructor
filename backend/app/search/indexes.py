@@ -9,7 +9,33 @@ from app.search.elastic_client import get_es
 
 log = get_logger(__name__)
 
-MAPPINGS_ROOT = Path(__file__).resolve().parents[3] / "infra" / "elastic"
+def _find_mappings_root() -> Path:
+    """Look for the infra/elastic/ mappings in several candidate locations.
+
+    Search order:
+      - $MAPPINGS_DIR (env override)
+      - <repo>/infra/elastic                  (when running natively)
+      - /app/infra/elastic                    (when infra/ is mounted into backend)
+      - /infra/elastic                        (when infra/ is mounted at root)
+    """
+    import os
+
+    if env := os.getenv("MAPPINGS_DIR"):
+        return Path(env)
+
+    here = Path(__file__).resolve()
+    candidates = [
+        here.parents[3] / "infra" / "elastic",        # repo layout
+        Path("/app/infra/elastic"),
+        Path("/infra/elastic"),
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    return candidates[0]  # default — will surface a clear FileNotFoundError later
+
+
+MAPPINGS_ROOT = _find_mappings_root()
 
 
 def _load_mapping(name: str) -> dict:
