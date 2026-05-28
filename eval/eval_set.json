@@ -1,0 +1,12 @@
+{
+  "_schema": "v0",
+  "_note": "Stub eval set. Replace with hand-annotated examples before scoring.",
+  "papers": [
+    {
+      "identifier": "fixture:paper_a",
+      "expected_n_claims_min": 5,
+      "expected_shortcut_count_min": 1,
+      "expected_reproducibility_score_range": [40, 95]
+    }
+  ]
+}
