@@ -1,0 +1,43 @@
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #050505;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeOut 0.6s ease forwards;
+  animation-delay: 1.6s;
+}
+
+.loading-inner {
+  width: min(420px, 80vw);
+  font-family: system-ui, sans-serif;
+}
+
+.loading-label {
+  font-size: 18px;
+  margin-bottom: 14px;
+  letter-spacing: -0.02em;
+}
+
+.loading-bar {
+  height: 2px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+}
+
+.loading-bar div {
+  height: 100%;
+  background: white;
+  transition: width 0.18s ease;
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+    pointer-events: none;
+  }
+}

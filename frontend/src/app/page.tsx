@@ -1,6 +1,7 @@
 import { ArrowRight, CheckCircle2, FileText, Search, TriangleAlert } from "lucide-react";
 
 import { PaperInput } from "@/components/paper-input";
+import { ScrollStory } from "@/components/scroll-story";
 
 const EXAMPLES = [
   { label: "scRNA-seq chain", id: "fixture:paper_a" },
@@ -41,26 +42,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="process" className="px-3 py-3">
-        <div className="grid gap-3 md:grid-cols-2">
-          <FeaturePanel
-            eyebrow="Before"
-            title="Methods that point somewhere else."
-            body="Papers often replace the actual procedure with a citation. Then that cited paper does it again."
-            variant="dark"
-          >
-            <ShortcutCard />
-          </FeaturePanel>
-          <FeaturePanel
-            eyebrow="After"
-            title="A protocol you can inspect."
-            body="Resolved steps stay in the protocol. Missing steps are separated into a gap report instead of being guessed."
-            variant="light"
-          >
-            <ProtocolCard />
-          </FeaturePanel>
-        </div>
-      </section>
+      <ScrollStory />
 
       <section id="proof" className="bg-white px-5 py-20 text-center md:py-28">
         <div className="mx-auto max-w-5xl">
@@ -163,79 +145,6 @@ function ProductMockup() {
   );
 }
 
-function FeaturePanel({
-  eyebrow,
-  title,
-  body,
-  variant,
-  children,
-}: {
-  eyebrow: string;
-  title: string;
-  body: string;
-  variant: "dark" | "light";
-  children: React.ReactNode;
-}) {
-  const dark = variant === "dark";
-  return (
-    <div
-      className={
-        dark
-          ? "overflow-hidden bg-[#1d1d1f] px-6 py-10 text-white md:min-h-[720px] md:px-12 md:py-16"
-          : "overflow-hidden bg-white px-6 py-10 text-ink md:min-h-[720px] md:px-12 md:py-16"
-      }
-    >
-      <div className="mx-auto max-w-2xl text-center">
-        <p className={dark ? "text-sm font-semibold text-[#a1a1a6]" : "text-sm font-semibold text-accent"}>
-          {eyebrow}
-        </p>
-        <h2 className="mt-3 text-4xl font-semibold tracking-[-0.035em] md:text-6xl">
-          {title}
-        </h2>
-        <p className={dark ? "mt-4 text-lg leading-7 text-[#d2d2d7]" : "mt-4 text-lg leading-7 text-steel"}>
-          {body}
-        </p>
-      </div>
-      <div className="mx-auto mt-12 max-w-2xl">{children}</div>
-    </div>
-  );
-}
-
-function ShortcutCard() {
-  return (
-    <div className="rounded-[34px] bg-[#2c2c2e] p-6 text-left shadow-2xl">
-      <p className="text-sm leading-7 text-[#f5f5f7]">
-        Cells were prepared using the protocol described previously
-        <span className="mx-1 rounded-full bg-[#3a3a3c] px-2 py-1 text-[#ffd60a]">[ref_1]</span>
-        with minor modifications.
-      </p>
-      <div className="mt-8 space-y-3">
-        <MiniStep label="ref_1 points to ref_7" status="shortcut" dark />
-        <MiniStep label="ref_7 contains the procedure" status="resolved" dark />
-        <MiniStep label="supplement link missing" status="gap" dark />
-      </div>
-    </div>
-  );
-}
-
-function ProtocolCard() {
-  return (
-    <div className="rounded-[34px] bg-[#f5f5f7] p-6 text-left shadow-[0_18px_70px_rgba(0,0,0,0.10)]">
-      <div className="mb-6 flex items-center justify-between">
-        <span className="text-sm font-semibold">Protocol</span>
-        <span className="rounded-full bg-accentSoft px-3 py-1 text-xs font-semibold text-accent">
-          82% resolved
-        </span>
-      </div>
-      <div className="space-y-4">
-        <ProtocolStep n="1" text="Wash cells twice in PBS." />
-        <ProtocolStep n="2" text="Lyse for 10 minutes on ice." />
-        <ProtocolStep n="3" text="Centrifuge at 12,000g." />
-      </div>
-    </div>
-  );
-}
-
 function ProofTile({
   icon: Icon,
   title,
@@ -266,19 +175,11 @@ function HighlightedLine() {
   );
 }
 
-function MiniStep({
-  label,
-  status,
-  dark = false,
-}: {
-  label: string;
-  status: "shortcut" | "resolved" | "gap";
-  dark?: boolean;
-}) {
+function MiniStep({ label, status }: { label: string; status: "shortcut" | "resolved" | "gap" }) {
   const color =
     status === "resolved" ? "bg-[#34c759]" : status === "gap" ? "bg-[#ff3b30]" : "bg-[#ffcc00]";
   return (
-    <div className={dark ? "flex items-center gap-3 text-sm text-[#f5f5f7]" : "flex items-center gap-3 text-sm text-steel"}>
+    <div className="flex items-center gap-3 text-sm text-steel">
       <span className={`h-2.5 w-2.5 rounded-full ${color}`} />
       <span>{label}</span>
     </div>

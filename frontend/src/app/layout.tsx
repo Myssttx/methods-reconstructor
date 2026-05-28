@@ -1,4 +1,6 @@
+
 import type { Metadata } from "next";
+import { LoadingScreen } from "@/components/loading-screen";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -43,6 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </nav>
           </div>
         </header>
+	<LoadingScreen />
         <main>{children}</main>
         <footer className="border-t border-black/[0.08] bg-[#f5f5f7]">
           <div className="mx-auto flex max-w-6xl flex-col gap-3 px-5 py-6 text-xs text-steel md:flex-row md:items-center md:justify-between">
