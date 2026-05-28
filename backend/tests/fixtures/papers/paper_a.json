@@ -1,0 +1,34 @@
+{
+  "paper_id": "fixture:paper_a",
+  "source": "fixture",
+  "title": "Single-cell RNA-seq of murine cortical neurons under chronic stress",
+  "authors": [{"name": "Alvarez, M."}, {"name": "Chen, R."}],
+  "year": 2023,
+  "venue": "Demo Journal of Neuroscience",
+  "abstract": "We profile cortical neurons under chronic stress using single-cell RNA-seq.",
+  "sections": {
+    "methods": {
+      "name": "methods",
+      "text": "Mice were housed under standard conditions. Cortical tissue was dissociated into single-cell suspensions as described in Bremer et al. 2021 [ref_1]. Libraries were prepared using the 10x Genomics Chromium platform following the manufacturer's instructions. Sequencing was performed on an Illumina NovaSeq 6000 with 100bp paired-end reads. Reads were aligned to GRCm39 using STAR v2.7.10a with default parameters. Differential expression was computed using DESeq2 v1.36 with an adjusted p-value threshold of 0.05. Statistical analysis followed the framework of Chen et al. 2020 [ref_2]. Briefly, batch effects were corrected. Figures were produced in R version 4.2.1 with ggplot2."
+    }
+  },
+  "references": [
+    {
+      "ref_id": "ref_1",
+      "raw_citation": "Bremer et al., 2021. Dissociation protocols for cortical scRNA-seq.",
+      "doi": null,
+      "resolved": true,
+      "title": "Dissociation protocols for cortical scRNA-seq"
+    },
+    {
+      "ref_id": "ref_2",
+      "raw_citation": "Chen et al., 2020. Batch correction in single-cell data.",
+      "doi": null,
+      "resolved": true,
+      "title": "Batch correction in single-cell data"
+    }
+  ],
+  "open_access_url": null,
+  "full_text_available": true,
+  "ingested_at": ""
+}

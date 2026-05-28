@@ -133,7 +133,15 @@ class OfflineLLM(LLMClient):
 
     def _fake_decompose(self, prompt: str) -> str:
         methods = self._extract_methods_block(prompt)
-        sentences = re.findall(r"\[(\d+)\]\s*([^\[]+)", methods)
+        # Split on sentence-id markers like [0], [12] at the start of a token.
+        # Result alternates: [leading_text, sid, sentence_text, sid, ...]
+        parts = re.split(r"\[(\d+)\]\s*", methods)
+        sentences: list[tuple[str, str]] = []
+        for i in range(1, len(parts) - 1, 2):
+            sid = parts[i]
+            text = parts[i + 1].strip()
+            if text:
+                sentences.append((sid, text))
         claims = []
         for sid, text in sentences:
             text = text.strip()

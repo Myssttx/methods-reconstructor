@@ -1,0 +1,27 @@
+{
+  "paper_id": "fixture:bremer_2021",
+  "source": "fixture",
+  "title": "Dissociation protocols for cortical scRNA-seq",
+  "authors": [{"name": "Bremer, S."}],
+  "year": 2021,
+  "venue": "Demo Methods Journal",
+  "abstract": "We describe a dissociation protocol for mouse cortical tissue.",
+  "sections": {
+    "methods": {
+      "name": "methods",
+      "text": "Cortical tissue was dissected from adult C57BL/6J mice and minced into 1mm cubes. Tissue was then dissociated as previously described in Okamoto et al. 2016 [ref_1]. Briefly, samples were incubated in dissociation buffer for 30 minutes at 37C with gentle agitation. Single-cell suspensions were filtered through a 40-micron strainer and resuspended in PBS with 0.04% BSA. Cell viability was assessed via trypan blue exclusion; only samples >85% viability were used."
+    }
+  },
+  "references": [
+    {
+      "ref_id": "ref_1",
+      "raw_citation": "Okamoto et al., 2016. Enzymatic dissociation of neural tissue.",
+      "doi": null,
+      "resolved": true,
+      "title": "Enzymatic dissociation of neural tissue"
+    }
+  ],
+  "open_access_url": null,
+  "full_text_available": true,
+  "ingested_at": ""
+}

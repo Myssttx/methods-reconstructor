@@ -1,0 +1,19 @@
+{
+  "paper_id": "fixture:okamoto_2016",
+  "source": "fixture",
+  "title": "Enzymatic dissociation of neural tissue",
+  "authors": [{"name": "Okamoto, H."}],
+  "year": 2016,
+  "venue": "Demo Methods Journal",
+  "abstract": "Optimization of enzymatic dissociation for adult mouse cortex.",
+  "sections": {
+    "methods": {
+      "name": "methods",
+      "text": "Minced cortical tissue (1mm cubes) was incubated in a dissociation buffer containing 20 units/mL papain (Worthington), 1 mM L-cysteine, 0.5 mM EDTA, and 1 mM CaCl2 in HBSS at 37C for 30 minutes. The reaction was quenched by addition of an equal volume of ovomucoid inhibitor solution (0.7 mg/mL). The mixture was triturated 10 times with a fire-polished glass pipette, then layered onto a 4% BSA cushion and centrifuged at 200g for 6 minutes at room temperature. The cell pellet was resuspended in HBSS with 0.04% BSA and filtered through a 40-micron cell strainer."
+    }
+  },
+  "references": [],
+  "open_access_url": null,
+  "full_text_available": true,
+  "ingested_at": ""
+}

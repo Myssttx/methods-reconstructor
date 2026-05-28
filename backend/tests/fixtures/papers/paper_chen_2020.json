@@ -1,0 +1,19 @@
+{
+  "paper_id": "fixture:chen_2020",
+  "source": "fixture",
+  "title": "Batch correction in single-cell data",
+  "authors": [{"name": "Chen, Q."}],
+  "year": 2020,
+  "venue": "Demo Statistics Journal",
+  "abstract": "A framework for batch correction in scRNA-seq.",
+  "sections": {
+    "methods": {
+      "name": "methods",
+      "text": "We applied Harmony v0.1.0 to correct batch effects using donor identity as the grouping variable, with theta=2 and lambda=1. Highly variable genes were selected using the top 2000 genes by variance. Principal component analysis was performed on log-normalized counts using the first 30 components. UMAP was computed with n_neighbors=30 and min_dist=0.3. Cluster identity was determined via Louvain clustering at resolution=0.8."
+    }
+  },
+  "references": [],
+  "open_access_url": null,
+  "full_text_available": true,
+  "ingested_at": ""
+}
