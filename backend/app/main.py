@@ -1,0 +1,51 @@
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app import __version__
+from app.api import routes_exports, routes_papers, routes_reconstructions
+from app.config import get_settings
+from app.logging import configure_logging, get_logger
+
+settings = get_settings()
+configure_logging()
+log = get_logger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    log.info("startup", env=settings.app_env, llm=settings.resolved_llm_provider)
+    yield
+    log.info("shutdown")
+
+
+app = FastAPI(
+    title="Methods Reconstructor",
+    version=__version__,
+    description="Agent that resolves shortcut citations in scientific methods sections.",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/api/health")
+async def health():
+    return {
+        "status": "ok",
+        "version": __version__,
+        "llm_provider": settings.resolved_llm_provider,
+        "elastic_url": settings.elastic_url,
+    }
+
+
+app.include_router(routes_papers.router, prefix="/api/papers", tags=["papers"])
+app.include_router(routes_reconstructions.router, prefix="/api/reconstructions", tags=["reconstructions"])
+app.include_router(routes_exports.router, prefix="/api/reconstructions", tags=["exports"])
