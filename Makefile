@@ -1,63 +1,112 @@
-.PHONY: help dev up down logs build backend-shell frontend-shell test test-unit test-integration test-frontend lint eval clean elastic-init seed
+.PHONY: help dev up down logs build backend-shell frontend-shell test test-unit test-integration test-frontend lint eval clean elastic-init seed native-backend native-frontend native-elastic native-setup
+
+# Use modern `docker compose` v2 (built into Docker Desktop) by default.
+# Override with `make DC=docker-compose ...` if you only have the deprecated v1 binary.
+DC ?= docker compose
 
 help:
 	@echo "Methods Reconstructor — make targets"
-	@echo "  make dev               — start the full local stack (docker-compose)"
+	@echo ""
+	@echo "Docker stack (needs Docker Desktop or Colima):"
+	@echo "  make dev               — start the full local stack"
 	@echo "  make up                — alias for dev"
 	@echo "  make down              — stop the stack"
 	@echo "  make logs              — tail backend + frontend logs"
 	@echo "  make build             — rebuild docker images"
-	@echo "  make elastic-init      — create papers/claims indexes in local Elastic"
+	@echo "  make elastic-init      — create papers/claims indexes"
 	@echo "  make seed              — seed demo fixtures into Elastic"
+	@echo ""
+	@echo "Native (no Docker):"
+	@echo "  make native-setup      — one-time: install backend venv + frontend deps"
+	@echo "  make native-elastic    — start Elasticsearch via Homebrew services"
+	@echo "  make native-backend    — run FastAPI from backend/.venv"
+	@echo "  make native-frontend   — run Next.js from frontend/node_modules"
+	@echo ""
+	@echo "Tests + tooling:"
 	@echo "  make test              — run all backend tests"
 	@echo "  make test-unit         — backend unit tests"
-	@echo "  make test-integration  — backend integration tests (requires stack up)"
+	@echo "  make test-integration  — backend integration tests (requires stack)"
 	@echo "  make test-frontend     — frontend tests"
 	@echo "  make lint              — ruff + mypy + eslint"
 	@echo "  make eval              — run eval harness"
 	@echo "  make clean             — remove local state + caches"
 
 dev up:
-	docker-compose up --build
+	$(DC) up --build
 
 down:
-	docker-compose down
+	$(DC) down
 
 logs:
-	docker-compose logs -f backend frontend
+	$(DC) logs -f backend frontend
 
 build:
-	docker-compose build
+	$(DC) build
 
 backend-shell:
-	docker-compose exec backend bash
+	$(DC) exec backend bash
 
 frontend-shell:
-	docker-compose exec frontend sh
+	$(DC) exec frontend sh
 
 elastic-init:
-	docker-compose exec backend python -m infra.scripts.create_elastic_indexes
+	$(DC) exec backend python -m infra.scripts.create_elastic_indexes
 
 seed:
-	docker-compose exec backend python -m infra.scripts.seed_demo_corpus
+	$(DC) exec backend python -m infra.scripts.seed_demo_corpus
+
+# ---- Native (no-Docker) targets ----
+
+native-setup:
+	cd backend && python3 -m venv .venv && \
+		.venv/bin/pip install --upgrade pip && \
+		.venv/bin/pip install \
+			"fastapi==0.115.0" "uvicorn[standard]==0.32.0" \
+			"pydantic==2.9.2" "pydantic-settings==2.6.0" \
+			"httpx==0.27.2" "elasticsearch==8.15.1" \
+			"sentence-transformers==3.2.0" "sse-starlette==2.1.3" \
+			"tenacity==9.0.0" "python-multipart==0.0.12" \
+			"beautifulsoup4==4.12.3" "lxml==5.3.0" \
+			"arxiv==2.1.3" "crossrefapi==1.6.0" \
+			"redis==5.1.1" "structlog==24.4.0" \
+			"pytest==8.3.3" "pytest-asyncio==0.24.0"
+	cd frontend && npm install --no-audit --no-fund
+
+native-elastic:
+	brew services start elastic/tap/elasticsearch-full 2>/dev/null || brew services start elasticsearch
+
+native-backend:
+	cd backend && ELASTIC_URL=http://localhost:9200 LLM_PROVIDER=offline \
+		.venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+native-frontend:
+	cd frontend && npm run dev
+
+native-elastic-init:
+	cd backend && ELASTIC_URL=http://localhost:9200 \
+		.venv/bin/python ../infra/scripts/create_elastic_indexes.py
+
+native-seed:
+	cd backend && ELASTIC_URL=http://localhost:9200 EMBEDDINGS_FAKE=1 \
+		.venv/bin/python ../infra/scripts/seed_demo_corpus.py
 
 test: test-unit
 
 test-unit:
-	cd backend && python -m pytest tests/unit -v
+	cd backend && .venv/bin/python -m pytest tests/unit -v
 
 test-integration:
-	cd backend && python -m pytest tests/integration -v
+	cd backend && .venv/bin/python -m pytest tests/integration -v
 
 test-frontend:
 	cd frontend && npm test --silent || true
 
 lint:
-	cd backend && ruff check app tests && mypy app || true
+	cd backend && .venv/bin/ruff check app tests && .venv/bin/mypy app || true
 	cd frontend && npm run lint --silent || true
 
 eval:
-	cd backend && python -m eval.run_eval
+	cd backend && .venv/bin/python -m eval.run_eval
 
 clean:
 	rm -rf .local_storage .local_data backend/.pytest_cache backend/.ruff_cache backend/.mypy_cache frontend/.next frontend/node_modules
