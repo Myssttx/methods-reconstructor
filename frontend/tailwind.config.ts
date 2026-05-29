@@ -5,10 +5,13 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#0b0d10",
-        paper: "#fbfaf6",
-        accent: "#1e6f4e",
-        accentSoft: "#d6efe1",
+        ink: "#1d1d1f",
+        paper: "#f5f5f7",
+        accent: "#0071e3",
+        accentSoft: "#eaf3ff",
+        gold: "#bf8f2c",
+        graphite: "#1d1d1f",
+        steel: "#515154",
         warn: "#9b6c00",
         warnSoft: "#fcefc8",
         danger: "#b3261e",

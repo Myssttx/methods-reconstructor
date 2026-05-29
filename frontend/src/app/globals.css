@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --background: #fbfaf6;
-  --foreground: #0b0d10;
+  --background: #f5f5f7;
+  --foreground: #1d1d1f;
 }
 
 html, body {
@@ -18,3 +18,31 @@ body {
 }
 
 * { -webkit-font-smoothing: antialiased; }
+
+html {
+  scroll-behavior: smooth;
+}
+
+::selection {
+  background: #d6eaff;
+  color: #1d1d1f;
+}
+
+.shine-surface {
+  background:
+    radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 42%),
+    linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
+}
+
+.soft-orbit {
+  animation: soft-orbit 9s ease-in-out infinite;
+}
+
+@keyframes soft-orbit {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0);
+  }
+}

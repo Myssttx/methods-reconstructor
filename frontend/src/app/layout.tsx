@@ -5,21 +5,36 @@ export const metadata: Metadata = {
   title: "Methods Reconstructor",
   description:
     "Resolve shortcut citations in scientific methods sections. Get a self-contained, reproducible protocol — and a precise list of what could not be recovered.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className="min-h-screen bg-paper text-ink antialiased">
-        <header className="border-b border-border">
-          <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
-            <a href="/" className="font-serif text-xl tracking-tight">
-              Methods Reconstructor
+        <header className="sticky top-0 z-30 border-b border-black/[0.08] bg-[#fbfbfd]/80 backdrop-blur-xl">
+          <div className="mx-auto flex h-11 max-w-6xl items-center justify-between px-5">
+            <a href="/" className="flex items-center gap-2 text-[12px] font-semibold">
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-ink text-[9px] text-white">
+                MR
+              </span>
+              <span className="hidden sm:inline">Methods Reconstructor</span>
             </a>
-            <nav className="text-sm text-muted">
+            <nav className="flex items-center gap-5 text-[12px] text-steel">
+              <a href="/#process" className="hover:text-ink">
+                Process
+              </a>
+              <a href="/#proof" className="hover:text-ink">
+                Proof
+              </a>
+              <a href="/#try" className="hover:text-ink">
+                Try
+              </a>
               <a
                 href="https://github.com/Myssttx/methods-reconstructor"
-                className="hover:text-ink"
+                className="hidden hover:text-ink sm:inline"
                 target="_blank"
                 rel="noreferrer"
               >
@@ -28,10 +43,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </nav>
           </div>
         </header>
-        <main className="mx-auto max-w-6xl px-6 py-10">{children}</main>
-        <footer className="mt-20 border-t border-border">
-          <div className="mx-auto max-w-6xl px-6 py-6 text-xs text-muted">
-            Powered by Elastic hybrid search + a recursive citation-resolving agent. Apache 2.0.
+        <main>{children}</main>
+        <footer className="border-t border-black/[0.08] bg-[#f5f5f7]">
+          <div className="mx-auto flex max-w-6xl flex-col gap-3 px-5 py-6 text-xs text-steel md:flex-row md:items-center md:justify-between">
+            <span>Methods Reconstructor</span>
+            Recursive citation resolution with source-level provenance. Apache 2.0.
           </div>
         </footer>
       </body>
