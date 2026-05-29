@@ -3,8 +3,6 @@
 Used by the recursive chain resolver to fetch cited papers on demand.
 """
 
-import re
-
 from app.ingest import arxiv_client, openalex_client, pmc_client
 from app.ingest.fixtures import try_load_fixture
 from app.ingest.pipeline import _index_with_sentences

@@ -11,8 +11,7 @@ sentence-level vectors for the methods section.
 """
 
 import re
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 
 from app.ingest import arxiv_client, openalex_client, pmc_client
 from app.ingest.fixtures import try_load_fixture
@@ -102,7 +101,7 @@ def _paper_from_openalex(doi: str, meta: dict) -> Paper:
         references=refs,
         open_access_url=(meta.get("open_access") or {}).get("oa_url"),
         full_text_available=False,
-        ingested_at=datetime.now(timezone.utc).isoformat(),
+        ingested_at=datetime.now(UTC).isoformat(),
     )
 
 
@@ -123,7 +122,7 @@ async def _index_with_sentences(paper: Paper) -> Paper:
         vectors = embed_texts(sents) if sents else []
         sentence_docs = [
             {"sentence_id": i, "text": s, "vector": v}
-            for i, (s, v) in enumerate(zip(sents, vectors))
+            for i, (s, v) in enumerate(zip(sents, vectors, strict=False))
         ]
     else:
         sentence_docs = []

@@ -6,11 +6,9 @@ Run with the stack up via `make dev`.
 
 import asyncio
 import os
-import time
 
 import httpx
 import pytest
-
 
 ELASTIC_URL = os.environ.get("ELASTIC_URL", "http://localhost:9200")
 
@@ -29,9 +27,9 @@ pytestmark = pytest.mark.skipif(not _es_alive(), reason="elasticsearch not reach
 @pytest.mark.asyncio
 async def test_end_to_end_fixture_chain():
     from app.agent.runner import AgentRunner
-    from app.search.indexes import ensure_indexes
     from app.ingest.fixtures import load_all_fixtures
     from app.ingest.pipeline import _index_with_sentences
+    from app.search.indexes import ensure_indexes
 
     await ensure_indexes()
     for p in load_all_fixtures():

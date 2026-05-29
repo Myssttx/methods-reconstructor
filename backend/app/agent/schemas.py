@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from app.models import Claim, GapReason
+from app.models import GapReason
 
 
 class LocatorResult(BaseModel):

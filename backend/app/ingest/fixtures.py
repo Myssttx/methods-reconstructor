@@ -6,7 +6,7 @@ to actually resolve against.
 """
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from app.logging import get_logger
@@ -89,5 +89,5 @@ def load_all_fixtures() -> list[Paper]:
 
 def _hydrate(data: dict) -> Paper:
     if not data.get("ingested_at"):
-        data["ingested_at"] = datetime.now(timezone.utc).isoformat()
+        data["ingested_at"] = datetime.now(UTC).isoformat()
     return Paper.model_validate(data)

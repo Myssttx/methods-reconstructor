@@ -114,8 +114,7 @@ class OfflineLLM(LLMClient):
         temperature: float = 0.2,
     ) -> str:
         # The agent calls into the offline LLM with a small set of stable prompts.
-        # We branch on substring markers in the prompt body (system + user).
-        combined = (system or "") + "\n" + prompt
+        # We branch on substring markers in the prompt body.
         if "Methods section:" in prompt:
             return self._fake_decompose(prompt)
         if "ORIGINAL_CLAIM" in prompt and "CANDIDATE_PASSAGE" in prompt:

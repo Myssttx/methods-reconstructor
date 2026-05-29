@@ -10,7 +10,7 @@ Every call returns a ResolutionResult with a chain trace so the UI can show
 the user *exactly* where the resolution came from (or where it broke).
 """
 
-from typing import Callable
+from collections.abc import Callable
 
 from app.agent.schemas import ResolutionResult
 from app.agent.tools.methods_locator import locate
@@ -18,7 +18,7 @@ from app.agent.tools.paper_fetch import fetch_by_ref
 from app.config import get_settings
 from app.llm.embeddings import embed_text
 from app.logging import get_logger
-from app.models import Claim, GapReason, Paper, Reference, Specificity
+from app.models import Claim, GapReason, Paper, Specificity
 from app.search.hybrid_search import hybrid_claim_search
 
 log = get_logger(__name__)
@@ -112,7 +112,7 @@ async def _resolve_shortcut(
             return ResolutionResult(
                 status="resolved",
                 resolved_text=result.passage_text,
-                chain=chain + [step],
+                chain=[*chain, step],
                 confidence=0.85 - 0.1 * depth,
             )
 
@@ -129,10 +129,10 @@ async def _resolve_shortcut(
                 ref_paper,
                 on_event=on_event,
                 depth=depth + 1,
-                chain=chain + [step],
+                chain=[*chain, step],
             )
 
-        chain = chain + [step]
+        chain = [*chain, step]
 
     # No cited ref produced a resolution.
     fail_reason = (

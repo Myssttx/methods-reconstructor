@@ -1,7 +1,7 @@
 """arXiv: abstract + PDF URL. Primary working ingest path."""
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import arxiv
 
@@ -47,6 +47,6 @@ def fetch_arxiv(arxiv_id: str) -> Paper | None:
         sections={"abstract": Section(name="abstract", text=abstract)},
         open_access_url=r.pdf_url,
         full_text_available=False,  # we don't fetch PDF body by default
-        ingested_at=datetime.now(timezone.utc).isoformat(),
+        ingested_at=datetime.now(UTC).isoformat(),
     )
     return paper

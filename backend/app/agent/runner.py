@@ -7,14 +7,13 @@ messages for the frontend. Job + protocol state is persisted via the JobStore
 
 import asyncio
 import uuid
-from datetime import datetime, timezone
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 
 from app.agent.schemas import AgentEvent
 from app.agent.tools.chain_resolve import resolve_claim
 from app.agent.tools.methods_extract import extract_claims
 from app.agent.tools.protocol_assemble import assemble
-from app.config import get_settings
 from app.ingest.pipeline import ingest_identifier
 from app.llm.embeddings import embed_text
 from app.logging import get_logger
@@ -34,7 +33,7 @@ log = get_logger(__name__)
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class AgentRunner:
@@ -58,7 +57,6 @@ class AgentRunner:
 
     async def run(self) -> None:
         """Background-friendly entry point. Emits events; stores final protocol."""
-        settings = get_settings()
         await ensure_indexes()
         job = Job(
             job_id=self.job_id,
@@ -203,13 +201,16 @@ def _count_by_specificity(claims: list[Claim]) -> dict[str, int]:
 # Job registry — keep AgentRunner instances alive across API calls so the SSE
 # stream endpoint can attach to an in-flight job.
 _runners: dict[str, AgentRunner] = {}
+_runner_tasks: dict[str, asyncio.Task[None]] = {}
 
 
 def start_job(identifier: str) -> AgentRunner:
     job_id = str(uuid.uuid4())
     runner = AgentRunner(job_id=job_id, identifier=identifier)
     _runners[job_id] = runner
-    asyncio.create_task(runner.run())
+    task = asyncio.create_task(runner.run())
+    _runner_tasks[job_id] = task
+    task.add_done_callback(lambda _task: _runner_tasks.pop(job_id, None))
     return runner
 
 

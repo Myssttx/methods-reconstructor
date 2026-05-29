@@ -1,7 +1,7 @@
 """PubMed Central — full-text XML via E-utilities efetch."""
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 from lxml import etree
@@ -104,5 +104,5 @@ async def fetch_pmc(pmc_id: str) -> Paper | None:
         sections=sections,
         references=references,
         full_text_available="methods" in sections,
-        ingested_at=datetime.now(timezone.utc).isoformat(),
+        ingested_at=datetime.now(UTC).isoformat(),
     )
