@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     # GCP / Vertex (optional)
     gcp_project_id: str = ""
     gcp_region: str = "us-central1"
+    google_application_credentials: str = ""
     vertex_ai_location: str = "us-central1"
     gemini_model_pro: str = "gemini-2.5-pro"
     gemini_model_flash: str = "gemini-2.5-flash"

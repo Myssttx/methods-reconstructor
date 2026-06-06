@@ -12,8 +12,11 @@ and handle the offline shape (which is already structured JSON).
 
 import json
 import re
+import time
 import uuid
 from typing import Any
+
+import httpx
 
 from app.config import get_settings
 from app.logging import get_logger
@@ -269,6 +272,94 @@ class GeminiLLM(LLMClient):
         return resp.text or ""
 
 
+class VertexADCGeminiLLM(LLMClient):
+    """Gemini over Vertex AI REST using local Application Default Credentials."""
+
+    def __init__(
+        self,
+        *,
+        credentials_path: str,
+        project_id: str,
+        location: str,
+        pro_model: str,
+        flash_model: str,
+    ) -> None:
+        self.credentials_path = credentials_path
+        self.project_id = project_id
+        self.location = location or "global"
+        self.pro = pro_model
+        self.flash = flash_model
+        self._access_token = ""
+        self._expires_at = 0.0
+        with open(credentials_path, encoding="utf-8") as f:
+            self.credentials = json.load(f)
+        if self.credentials.get("type") != "authorized_user":
+            raise ValueError("Only user ADC credentials are supported by this lightweight client")
+        self.quota_project_id = self.credentials.get("quota_project_id") or project_id
+
+    async def _token(self) -> str:
+        if self._access_token and time.time() < self._expires_at - 60:
+            return self._access_token
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "client_id": self.credentials["client_id"],
+                    "client_secret": self.credentials["client_secret"],
+                    "refresh_token": self.credentials["refresh_token"],
+                    "grant_type": "refresh_token",
+                },
+            )
+            resp.raise_for_status()
+            payload = resp.json()
+
+        self._access_token = payload["access_token"]
+        self._expires_at = time.time() + int(payload.get("expires_in", 3600))
+        return self._access_token
+
+    async def complete(
+        self,
+        prompt: str,
+        *,
+        model: str = "pro",
+        response_format: str = "text",
+        system: str | None = None,
+        temperature: float = 0.2,
+    ) -> str:
+        model_name = self.pro if model == "pro" else self.flash
+        url = (
+            "https://aiplatform.googleapis.com/v1/"
+            f"projects/{self.project_id}/locations/{self.location}/"
+            f"publishers/google/models/{model_name}:generateContent"
+        )
+        body: dict[str, Any] = {
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "generationConfig": {"temperature": temperature},
+        }
+        if response_format == "json":
+            body["generationConfig"]["responseMimeType"] = "application/json"
+        if system:
+            body["systemInstruction"] = {"parts": [{"text": system}]}
+
+        token = await self._token()
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(
+                url,
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                    "x-goog-user-project": self.quota_project_id,
+                },
+                json=body,
+            )
+            resp.raise_for_status()
+            payload = resp.json()
+
+        parts = payload.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+        return "\n".join(part.get("text", "") for part in parts if part.get("text"))
+
+
 class AnthropicLLM(LLMClient):
     def __init__(self, api_key: str) -> None:
         from anthropic import AsyncAnthropic  # type: ignore[import-not-found]
@@ -314,6 +405,25 @@ def get_llm() -> LLMClient:
             log.info("llm.init", provider="gemini")
             _client = GeminiLLM(
                 api_key=settings.google_api_key,
+                pro_model=settings.gemini_model_pro,
+                flash_model=settings.gemini_model_flash,
+            )
+            return _client
+        if (
+            provider == "gemini"
+            and settings.google_application_credentials
+            and settings.gcp_project_id
+        ):
+            log.info(
+                "llm.init",
+                provider="vertex_adc",
+                project=settings.gcp_project_id,
+                location=settings.vertex_ai_location,
+            )
+            _client = VertexADCGeminiLLM(
+                credentials_path=settings.google_application_credentials,
+                project_id=settings.gcp_project_id,
+                location=settings.vertex_ai_location,
                 pro_model=settings.gemini_model_pro,
                 flash_model=settings.gemini_model_flash,
             )

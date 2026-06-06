@@ -84,7 +84,7 @@ function ProductMockup() {
   return (
     <div className="relative mx-auto rounded-[34px] bg-[#1d1d1f] p-2 shadow-[0_30px_120px_rgba(0,0,0,0.22)] md:rounded-[44px] md:p-3">
       <div className="overflow-hidden rounded-[28px] bg-white md:rounded-[36px]">
-        <div className="flex items-center justify-between border-b border-black/[0.06] px-5 py-3 text-xs text-steel">
+        <div className="flex items-center justify-between border-b border-black/[0.06] px-5 py-3 text-sm text-steel">
           <div className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
             <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
@@ -99,8 +99,8 @@ function ProductMockup() {
                 <FileText className="h-5 w-5 text-accent" />
               </div>
               <div>
-                <div className="text-sm font-semibold">Original methods</div>
-                <div className="text-xs text-steel">3 unresolved shortcuts</div>
+                <div className="text-base font-semibold">Original methods</div>
+                <div className="text-sm text-steel">3 unresolved shortcuts</div>
               </div>
             </div>
             <PaperLine width="w-full" />
@@ -109,10 +109,10 @@ function ProductMockup() {
             <PaperLine width="w-10/12" />
             <PaperLine width="w-7/12" />
             <div className="mt-8 rounded-3xl bg-white p-4 shadow-sm ring-1 ring-black/[0.05]">
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-steel">
+              <div className="text-sm font-semibold uppercase tracking-[0.14em] text-steel">
                 Chain
               </div>
-              <div className="mt-4 space-y-3 text-sm">
+              <div className="mt-4 space-y-3 text-base">
                 <MiniStep label="ref_1" status="shortcut" />
                 <MiniStep label="ref_7" status="resolved" />
                 <MiniStep label="ref_12" status="gap" />
@@ -120,7 +120,7 @@ function ProductMockup() {
             </div>
           </div>
           <div className="p-5 text-left md:p-8">
-            <div className="mb-5 inline-flex rounded-full bg-accentSoft px-3 py-1 text-sm font-semibold text-accent">
+            <div className="mb-5 inline-flex rounded-full bg-accentSoft px-3 py-1 text-base font-semibold text-accent">
               Reconstructed protocol
             </div>
             <h3 className="max-w-xl text-3xl font-semibold tracking-[-0.03em] md:text-4xl">
@@ -132,8 +132,8 @@ function ProductMockup() {
               <ProtocolStep n="3" text="Centrifuge at 12,000g, then retain the supernatant." />
             </div>
             <div className="mt-8 rounded-3xl bg-[#f5f5f7] p-5">
-              <div className="text-sm font-semibold">Gap report</div>
-              <p className="mt-2 text-sm leading-6 text-steel">
+              <div className="text-base font-semibold">Gap report</div>
+              <p className="mt-2 text-base leading-7 text-steel">
                 One parameter is not recoverable from the citation chain. The
                 source paper delegates it to a missing supplement.
               </p>
@@ -169,7 +169,7 @@ function PaperLine({ width }: { width: string }) {
 
 function HighlightedLine() {
   return (
-    <div className="mb-3 rounded-full bg-[#fff2c7] px-3 py-2 text-xs font-medium text-[#6d4b00]">
+    <div className="mb-3 rounded-full bg-[#fff2c7] px-3 py-2 text-sm font-medium text-[#6d4b00]">
       as described in [ref_1]
     </div>
   );
@@ -179,7 +179,7 @@ function MiniStep({ label, status }: { label: string; status: "shortcut" | "reso
   const color =
     status === "resolved" ? "bg-[#34c759]" : status === "gap" ? "bg-[#ff3b30]" : "bg-[#ffcc00]";
   return (
-    <div className="flex items-center gap-3 text-sm text-steel">
+    <div className="flex items-center gap-3 text-base text-steel">
       <span className={`h-2.5 w-2.5 rounded-full ${color}`} />
       <span>{label}</span>
     </div>
@@ -192,7 +192,7 @@ function ProtocolStep({ n, text }: { n: string; text: string }) {
       <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-ink text-xs font-semibold text-white">
         {n}
       </div>
-      <p className="leading-7 text-steel">{text}</p>
+      <p className="text-base leading-7 text-steel">{text}</p>
     </div>
   );
 }
