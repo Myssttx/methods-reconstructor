@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import { CheckCircle2, FileSearch, GitBranch, LoaderCircle } from "lucide-react";
 
 import { AgentStream } from "@/components/agent-stream";
 import { GapReport } from "@/components/gap-report";
@@ -123,10 +125,79 @@ function SkeletonProtocol({ status }: { status: "running" | "done" | "error" }) 
     );
   }
   return (
-    <div className="space-y-4">
-      <div className="h-24 rounded-2xl bg-white border border-border animate-pulse" />
-      <div className="h-32 rounded-2xl bg-white border border-border animate-pulse" />
-      <div className="h-48 rounded-2xl bg-white border border-border animate-pulse" />
+    <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+      <div className="border-b border-border bg-[#fbfbfd] p-6">
+        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
+              Reconstruction in progress
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-ink">
+              Chasing methods through the citation chain
+            </h2>
+          </div>
+          <div className="inline-flex items-center gap-2 rounded-full bg-accentSoft px-3 py-2 text-sm font-semibold text-accent">
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+            Gemini working
+          </div>
+        </div>
+        <div className="mt-6 h-1.5 overflow-hidden rounded-full bg-black/10">
+          <div className="h-full w-full origin-left animate-[loader-fill_2.4s_cubic-bezier(0.22,1,0.36,1)_infinite] bg-accent" />
+        </div>
+      </div>
+
+      <div className="grid gap-0 md:grid-cols-[0.9fr_1.1fr]">
+        <div className="border-b border-border p-6 md:border-b-0 md:border-r">
+          <div className="space-y-4">
+            <LoadingStep icon={<FileSearch className="h-4 w-4" />} label="Parse methods section" />
+            <LoadingStep icon={<GitBranch className="h-4 w-4" />} label="Resolve shortcut citations" />
+            <LoadingStep icon={<CheckCircle2 className="h-4 w-4" />} label="Score recoverability" />
+          </div>
+        </div>
+
+        <div className="p-6">
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <div className="h-3 w-32 rounded-full bg-black/15" />
+              <div className="mt-2 h-2.5 w-52 rounded-full bg-black/10" />
+            </div>
+            <div className="h-10 w-10 rounded-full bg-accentSoft" />
+          </div>
+          <div className="space-y-3">
+            <SkeletonLine width="w-full" />
+            <SkeletonLine width="w-11/12" />
+            <SkeletonLine width="w-9/12" />
+          </div>
+          <div className="mt-6 rounded-xl bg-[#f5f5f7] p-4">
+            <div className="mb-4 h-3 w-24 rounded-full bg-black/15" />
+            <div className="space-y-3">
+              <SkeletonLine width="w-10/12" />
+              <SkeletonLine width="w-8/12" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LoadingStep({ icon, label }: { icon: ReactNode; label: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-border bg-[#fbfbfd] p-3">
+      <div className="grid h-9 w-9 place-items-center rounded-lg bg-ink text-white">{icon}</div>
+      <div>
+        <p className="text-sm font-semibold text-ink">{label}</p>
+        <p className="mt-1 text-xs text-muted">running source-level checks</p>
+      </div>
+    </div>
+  );
+}
+
+function SkeletonLine({ width }: { width: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="h-2.5 w-2.5 rounded-full bg-accent/70" />
+      <div className={cn("h-3 animate-pulse rounded-full bg-black/10", width)} />
     </div>
   );
 }
