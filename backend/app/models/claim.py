@@ -25,12 +25,15 @@ class ResolutionStatus(str, Enum):
     UNRESOLVED = "unresolved"
     RESOLVING = "resolving"
     RESOLVED = "resolved"
+    INFERRED = "inferred"
     TERMINAL_GAP = "terminal_gap"
 
 
 class GapReason(str, Enum):
     DEPTH_EXCEEDED = "depth_exceeded"
     PAYWALL_OR_DEAD = "paywall_or_dead"
+    SOURCE_UNAVAILABLE = "source_unavailable"
+    REFERENCE_UNRESOLVED = "reference_unresolved"
     NO_MATCH_IN_CITED = "no_match_in_cited"
     NO_REFERENCE = "no_reference"
     PARSING_FAILED = "parsing_failed"

@@ -57,7 +57,10 @@ async def evaluate(eval_set_path: Path) -> list[dict]:
             {
                 "identifier": identifier,
                 "ok": proto is not None,
-                "score": (proto or {}).get("reproducibility_score"),
+                "score": (proto or {}).get(
+                    "methods_evidence_score",
+                    (proto or {}).get("reproducibility_score"),
+                ),
                 "n_sections": len((proto or {}).get("sections") or {}),
                 "n_gaps": len((proto or {}).get("gaps") or []),
             }

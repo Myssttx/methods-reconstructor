@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { CheckCircle2, FileSearch, GitBranch, LoaderCircle } from "lucide-react";
 
@@ -8,7 +8,7 @@ import { AgentStream } from "@/components/agent-stream";
 import { GapReport } from "@/components/gap-report";
 import { ProtocolView } from "@/components/protocol-view";
 import { ScoreBreakdown } from "@/components/score-breakdown";
-import { exportUrl, fetchProtocol } from "@/lib/api";
+import { exportUrl, fetchJob, fetchProtocol } from "@/lib/api";
 import type { AgentEvent, ReconstructedProtocol } from "@/lib/types";
 import { cn, fmtPct, scoreBg, scoreColor } from "@/lib/utils";
 
@@ -19,16 +19,35 @@ export default function ReconstructionPage({ params }: { params: { jobId: string
   const [status, setStatus] = useState<"running" | "done" | "error">("running");
   const [tab, setTab] = useState<"protocol" | "gaps" | "scores">("protocol");
 
-  function handleEvent(ev: AgentEvent) {
+  const loadProtocol = useCallback(() => {
+    fetchProtocol(jobId)
+      .then((p) => {
+        setProtocol(p as ReconstructedProtocol);
+        setStatus("done");
+      })
+      .catch(() => setStatus("error"));
+  }, [jobId]);
+
+  useEffect(() => {
+    fetchJob(jobId)
+      .then((job) => {
+        if (job.status === "complete") loadProtocol();
+        if (job.status === "failed") setStatus("error");
+      })
+      .catch(() => setStatus("error"));
+  }, [jobId, loadProtocol]);
+
+  const handleEvent = useCallback((ev: AgentEvent) => {
     setEvents((prev) => [...prev, ev]);
     if (ev.type === "complete") {
-      setStatus("done");
-      fetchProtocol(jobId)
-        .then((p) => setProtocol(p as ReconstructedProtocol))
-        .catch(() => setStatus("error"));
+      loadProtocol();
     }
     if (ev.type === "error") setStatus("error");
-  }
+  }, [loadProtocol]);
+
+  const evidenceScore = protocol?.methods_evidence_score
+    ?? protocol?.reproducibility_score
+    ?? 0;
 
   return (
     <div className="space-y-8">
@@ -46,28 +65,28 @@ export default function ReconstructionPage({ params }: { params: { jobId: string
               <div
                 className={cn(
                   "rounded-2xl border border-border p-6 flex items-center gap-6",
-                  scoreBg(protocol.reproducibility_score),
+                  scoreBg(evidenceScore),
                 )}
               >
                 <div className="text-center">
                   <div
                     className={cn(
                       "font-serif text-5xl font-medium",
-                      scoreColor(protocol.reproducibility_score),
+                      scoreColor(evidenceScore),
                     )}
                   >
-                    {fmtPct(protocol.reproducibility_score)}
+                    {fmtPct(evidenceScore)}
                   </div>
                   <div className="text-xs text-muted uppercase tracking-wider mt-1">
-                    Reproducibility
+                    Methods evidence coverage
                   </div>
                 </div>
                 <div className="text-sm text-muted flex-1">
                   <p>
                     Reconstructed from {protocol.source_paper_id}. Built by
                     chasing shortcut citations through Elastic hybrid retrieval
-                    until each claim either resolves to source-paper detail or
-                    surfaces as a terminal gap.
+                    until each claim either resolves to sentence-level evidence,
+                    remains explicitly inferred, or surfaces as a terminal gap.
                   </p>
                 </div>
               </div>

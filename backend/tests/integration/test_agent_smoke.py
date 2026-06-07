@@ -29,21 +29,35 @@ async def test_end_to_end_fixture_chain():
     from app.agent.runner import AgentRunner
     from app.ingest.fixtures import load_all_fixtures
     from app.ingest.pipeline import _index_with_sentences
+    from app.search.claims_dao import claims_for_paper
+    from app.search.elastic_client import close_es
     from app.search.indexes import ensure_indexes
 
-    await ensure_indexes()
-    for p in load_all_fixtures():
-        await _index_with_sentences(p)
+    try:
+        await ensure_indexes()
+        for p in load_all_fixtures():
+            await _index_with_sentences(p)
 
-    runner = AgentRunner(job_id="smoke-test", identifier="fixture:paper_a")
-    task = asyncio.create_task(runner.run())
+        async def run(job_id: str):
+            runner = AgentRunner(job_id=job_id, identifier="fixture:paper_a")
+            task = asyncio.create_task(runner.run())
+            final_event = None
+            async for ev in runner.stream():
+                if ev.type in {"complete", "error"}:
+                    final_event = ev
+                    break
+            await task
+            assert final_event is not None
+            assert final_event.type == "complete"
 
-    final_event = None
-    async for ev in runner.stream():
-        if ev.type in {"complete", "error"}:
-            final_event = ev
-            break
+        await run("smoke-test")
+        first_claims = await claims_for_paper("fixture:paper_a")
+        await run("smoke-test-repeat")
+        second_claims = await claims_for_paper("fixture:paper_a")
 
-    await task
-    assert final_event is not None
-    assert final_event.type == "complete"
+        assert len(first_claims) == len(second_claims)
+        assert {c["claim_id"] for c in first_claims} == {
+            c["claim_id"] for c in second_claims
+        }
+    finally:
+        await close_es()

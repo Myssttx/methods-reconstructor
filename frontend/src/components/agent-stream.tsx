@@ -13,14 +13,16 @@ interface Props {
 }
 
 export function AgentStream({ jobId, events, onEvent }: Props) {
-  const subscribed = useRef(false);
+  const onEventRef = useRef(onEvent);
 
   useEffect(() => {
-    if (subscribed.current) return;
-    subscribed.current = true;
-    const handle = subscribeAgentStream(jobId, onEvent);
+    onEventRef.current = onEvent;
+  }, [onEvent]);
+
+  useEffect(() => {
+    const handle = subscribeAgentStream(jobId, (event) => onEventRef.current(event));
     return () => handle.close();
-  }, [jobId, onEvent]);
+  }, [jobId]);
 
   return (
     <div className="space-y-1 max-h-[70vh] overflow-y-auto rounded-lg border border-border bg-white p-2 text-xs">

@@ -46,6 +46,8 @@
         }
       },
       "open_access_url": {"type": "keyword"},
+      "full_text_available": {"type": "boolean"},
+      "ingest_version": {"type": "keyword"},
       "ingested_at": {"type": "date"}
     }
   }

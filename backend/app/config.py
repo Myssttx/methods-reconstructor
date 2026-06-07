@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     app_max_recursion_depth: int = 5
     app_per_paper_token_budget: int = 500_000
     app_agent_timeout_seconds: int = 300
+    app_max_concurrent_jobs: int = 2
+    app_max_concurrent_claims: int = 4
+    app_max_methods_chunk_chars: int = 40_000
+    app_max_assembly_chars: int = 100_000
 
     # GCP / Vertex (optional)
     gcp_project_id: str = ""

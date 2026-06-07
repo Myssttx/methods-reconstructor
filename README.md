@@ -1,6 +1,7 @@
 # Methods Reconstructor
 
-An agent that turns shortcut-citation-riddled scientific methods sections into self-contained, reproducible protocols — and flags exactly where the chain breaks.
+An agent that turns shortcut-citation-riddled scientific methods sections into
+evidence-backed methods packets and flags exactly where the citation chain breaks.
 
 Built for the **Google Cloud Rapid Agent Hackathon — Elastic Track**.
 
@@ -13,8 +14,9 @@ You paste a paper (arXiv URL, DOI, PMC ID, or PDF). The agent:
 1. **Ingests** the paper and indexes it into Elastic (full text, methods sentences with vector embeddings, references)
 2. **Decomposes** the methods section into structured methodological claims
 3. **Recursively resolves** every "as described in Smith et al. 2019" shortcut by fetching the cited paper, locating the actual procedure via Elastic hybrid search, and recursing if that paper *also* shortcuts (up to a depth cap of 5)
-4. **Assembles** a reconstructed protocol with full provenance (every claim links back to the source sentence)
+4. **Assembles** a methods packet with sentence-level provenance and clearly marked corpus inferences
 5. **Reports gaps** — every claim it couldn't resolve, why, and what to do next
+6. **Reports methods evidence coverage** — not a claim that the experiment itself is reproducible
 
 The defensible primitive is the **recursive citation-chain resolver + Elastic hybrid retrieval** combined. A vanilla single-shot RAG can't do this.
 
@@ -37,9 +39,10 @@ Full spec: [docs/BUILD_SPEC.md](docs/BUILD_SPEC.md). Product brief: [docs/PRD.md
 
 This product exists because **Elastic does the heavy lifting** at three points the agent loop can't shortcut:
 
-1. **Hybrid sentence-level retrieval** — given a methodological claim, find the *exact* sentences in a cited paper that describe it. BM25 alone misses paraphrased techniques; vectors alone return vaguely-related content. Elastic's hybrid (BM25 + dense vectors + RRF) is the right primitive.
-2. **Claim corpus as a structured index** — claims have keyword fields (type, specificity, resolution_status), text fields (raw_text, resolved_text), and dense vectors. Elastic handles all three natively in one index.
-3. **Citation-graph aggregations** — "how many papers cite paper X for method Y?" is an aggregation, not a retrieval. Elastic aggs make this fast at corpus scale.
+1. **Canonical paper cache** — parsed methods, references, sentence IDs, embeddings, and parser version live in the papers index. Repeated runs reuse this evidence.
+2. **Hybrid sentence-level retrieval** — BM25 and dense-vector rankings are fused with RRF, then expanded into one ordered, contiguous context window from the indexed paper.
+3. **Structured claim corpus** — claims have keyword, text, provenance, status, and vector fields. Repeated runs replace the paper's claim set instead of accumulating duplicates.
+4. **Citation-graph analytics** — future corpus-level method-dependency analysis can use Elastic aggregations over the same evidence store.
 
 The local stack runs a real Elasticsearch 8.15 node via `docker-compose`. Production swaps that for Elastic Cloud — same client, same mappings.
 
@@ -71,7 +74,11 @@ eval/       Held-out eval set + harness
 
 ## Status
 
-This is an early prototype. The directory shape, Elastic mappings, agent loop, and prompts match the build spec verbatim. Cloud deploy paths (Cloud Run, Firestore, Vertex AI) are scaffolded but require real GCP credentials to exercise — the local stack provides drop-in fallbacks (file-based job store, sentence-transformers embeddings, offline LLM).
+This is a research prototype, not a validated reproducibility assessor. It validates
+structured LLM output, rejects fabricated source spans, distinguishes evidence-backed
+resolution from corpus inference, enforces job limits, and persists completed results.
+The local worker registry is still process-local; production deployment needs a durable
+queue for jobs that must survive worker restarts.
 
 ## License
 

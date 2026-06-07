@@ -40,3 +40,4 @@ def get_es() -> AsyncElasticsearch:
 async def close_es() -> None:
     es = get_es()
     await es.close()
+    get_es.cache_clear()

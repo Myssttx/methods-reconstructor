@@ -1,60 +1,86 @@
-"""Resolve any identifier (DOI, arxiv id, pmc id, raw citation) to a Paper.
+"""Resolve a citation to an Elasticsearch-indexed paper with methods text."""
 
-Used by the recursive chain resolver to fetch cited papers on demand.
-"""
+import re
+from dataclasses import dataclass
 
-from app.ingest import arxiv_client, openalex_client, pmc_client
-from app.ingest.fixtures import try_load_fixture
-from app.ingest.pipeline import _index_with_sentences
+from app.ingest import crossref_client
+from app.ingest.pipeline import ingest_identifier
 from app.logging import get_logger
-from app.models import Paper, Reference
+from app.models import GapReason, Paper, Reference
+from app.search.papers_dao import find_paper_by_citation
 
 log = get_logger(__name__)
 
 
-async def fetch_by_ref(ref: Reference | str) -> Paper | None:
-    """`ref` can be a Reference object or a raw string identifier."""
-    if isinstance(ref, Reference):
-        # Try DOI, arxiv_id, pmc_id, then raw_citation as a last resort
-        for ident in [
-            f"doi:{ref.doi}" if ref.doi else None,
-            f"arxiv:{ref.arxiv_id}" if ref.arxiv_id else None,
-            f"pmc:{ref.pmc_id}" if ref.pmc_id else None,
-            ref.raw_citation,
-        ]:
-            if not ident:
-                continue
-            paper = await _try_resolve(ident)
-            if paper is not None:
-                return paper
-        return None
-    return await _try_resolve(ref)
+@dataclass
+class FetchResult:
+    paper: Paper | None
+    failure_reason: GapReason | None = None
 
 
-async def _try_resolve(identifier: str) -> Paper | None:
-    fix = try_load_fixture(identifier)
-    if fix is not None:
-        return await _index_with_sentences(fix)
+async def fetch_by_ref(ref: Reference | str) -> FetchResult:
+    """Resolve from Elastic first, then canonical external sources."""
+    if isinstance(ref, str):
+        paper = await ingest_identifier(ref)
+        if paper and paper.methods_text():
+            return FetchResult(paper=paper)
+        return FetchResult(
+            paper=None,
+            failure_reason=(
+                GapReason.SOURCE_UNAVAILABLE if paper else GapReason.REFERENCE_UNRESOLVED
+            ),
+        )
 
-    arxiv_id = arxiv_client.parse_arxiv_id(identifier)
-    if arxiv_id:
-        paper = arxiv_client.fetch_arxiv(arxiv_id)
-        if paper:
-            return await _index_with_sentences(paper)
+    identifiers = [
+        f"doi:{ref.doi}" if ref.doi else None,
+        f"arxiv:{ref.arxiv_id}" if ref.arxiv_id else None,
+        f"pmc:{ref.pmc_id}" if ref.pmc_id else None,
+    ]
+    found_metadata = False
+    for identifier in identifiers:
+        if not identifier:
+            continue
+        paper = await ingest_identifier(identifier)
+        if paper is not None:
+            found_metadata = True
+        if paper and paper.methods_text():
+            return FetchResult(paper=paper)
 
-    pmc_id = pmc_client.parse_pmc_id(identifier)
-    if pmc_id:
-        paper = await pmc_client.fetch_pmc(pmc_id)
-        if paper:
-            return await _index_with_sentences(paper)
+    citation = ref.title or ref.raw_citation
+    indexed = await find_paper_by_citation(citation)
+    if (
+        indexed
+        and indexed.methods_text()
+        and _citation_matches_title(citation, indexed.title)
+    ):
+        log.info("paper_fetch.elastic_citation_hit", paper_id=indexed.paper_id)
+        return FetchResult(paper=indexed)
 
-    doi = openalex_client.parse_doi(identifier)
+    doi = await crossref_client.resolve_citation(citation)
     if doi:
-        meta = await openalex_client.fetch_openalex_by_doi(doi)
-        if meta:
-            from app.ingest.pipeline import _paper_from_openalex
+        paper = await ingest_identifier(f"doi:{doi}")
+        if paper is not None:
+            found_metadata = True
+        if paper and paper.methods_text():
+            return FetchResult(paper=paper)
 
-            paper = _paper_from_openalex(doi, meta)
-            return await _index_with_sentences(paper)
+    return FetchResult(
+        paper=None,
+        failure_reason=(
+            GapReason.SOURCE_UNAVAILABLE
+            if found_metadata
+            else GapReason.REFERENCE_UNRESOLVED
+        ),
+    )
 
-    return None
+
+def _citation_matches_title(citation: str, title: str) -> bool:
+    title_tokens = {
+        token
+        for token in re.findall(r"[a-z0-9]+", title.casefold())
+        if len(token) >= 4
+    }
+    if not title_tokens:
+        return False
+    citation_tokens = set(re.findall(r"[a-z0-9]+", citation.casefold()))
+    return len(title_tokens & citation_tokens) / len(title_tokens) >= 0.6

@@ -41,6 +41,12 @@ export function ClaimCard({ claim }: { claim: Claim }) {
             <span className="uppercase tracking-wider">{claim.type}</span>
             <span>·</span>
             <span>{SPECIFICITY_LABEL[claim.specificity] ?? claim.specificity}</span>
+            {claim.resolution_status === "inferred" && (
+              <>
+                <span>·</span>
+                <span className="font-semibold text-warn">corpus inference, not verified</span>
+              </>
+            )}
             <span>·</span>
             <span>{sourceLabel}</span>
             {claim.confidence > 0 && (

@@ -28,7 +28,6 @@ export function subscribeAgentStream(
 
   es.onerror = (err) => {
     onError?.(err);
-    es.close();
   };
 
   return { close: () => es.close() };

@@ -1,11 +1,11 @@
 import uuid
 
 from app.agent.tools.protocol_assemble import compute_scores
-from app.models import Claim, ClaimType, ResolutionStatus, Specificity
+from app.models import ChainStep, Claim, ClaimType, ResolutionStatus, Specificity
 
 
 def _c(type_: ClaimType, status: ResolutionStatus, spec=Specificity.SHORTCUT_CITATION, conf=1.0):
-    return Claim(
+    claim = Claim(
         claim_id=str(uuid.uuid4()),
         paper_id="p",
         type=type_,
@@ -14,6 +14,16 @@ def _c(type_: ClaimType, status: ResolutionStatus, spec=Specificity.SHORTCUT_CIT
         resolution_status=status,
         confidence=conf,
     )
+    if status == ResolutionStatus.RESOLVED and spec != Specificity.FULLY_DESCRIBED:
+        claim.resolution_chain = [
+            ChainStep(
+                depth=0,
+                source_paper_id="doi:10.1000/source",
+                sentence_ids=[1, 2],
+                extracted_text="evidence",
+            )
+        ]
+    return claim
 
 
 def test_score_all_resolved_high():
@@ -35,7 +45,7 @@ def test_score_all_terminal_gaps_zero():
     assert overall == 0.0
 
 
-def test_score_partial_credit_for_fully_described():
+def test_score_fully_described_counts_as_source_evidence():
     claims = [
         _c(
             ClaimType.PROCEDURE,
@@ -44,15 +54,26 @@ def test_score_partial_credit_for_fully_described():
         )
     ]
     overall, _ = compute_scores(claims)
-    assert overall == 70.0
+    assert overall == 100.0
 
 
-def test_score_weights_procedure_higher_than_equipment():
-    """Procedure (weight 3.0) should swamp equipment (weight 1.0) in mixed claims."""
+def test_score_is_equal_claim_evidence_coverage():
     claims = [
         _c(ClaimType.PROCEDURE, ResolutionStatus.RESOLVED),
         _c(ClaimType.EQUIPMENT, ResolutionStatus.TERMINAL_GAP),
     ]
     overall, _ = compute_scores(claims)
-    # earned 3.0, total 4.0 → 75%
-    assert overall == 75.0
+    assert overall == 50.0
+
+
+def test_corpus_inference_does_not_count_as_evidence():
+    claims = [
+        _c(ClaimType.PROCEDURE, ResolutionStatus.INFERRED),
+        _c(
+            ClaimType.REAGENT,
+            ResolutionStatus.RESOLVED,
+            spec=Specificity.FULLY_DESCRIBED,
+        ),
+    ]
+    overall, _ = compute_scores(claims)
+    assert overall == 50.0

@@ -7,6 +7,7 @@ swap in Vertex AI text-embedding-005 (768-dim — also bump the index mappings).
 
 import os
 import threading
+from asyncio import to_thread
 
 from app.logging import get_logger
 
@@ -48,6 +49,15 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
 
 def embed_text(text: str) -> list[float]:
     return embed_texts([text])[0]
+
+
+async def aembed_texts(texts: list[str]) -> list[list[float]]:
+    """Run CPU-bound local embedding work outside the FastAPI event loop."""
+    return await to_thread(embed_texts, texts)
+
+
+async def aembed_text(text: str) -> list[float]:
+    return (await aembed_texts([text]))[0]
 
 
 def embedding_dim() -> int:

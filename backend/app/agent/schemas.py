@@ -4,7 +4,34 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from app.models import GapReason
+from app.models import ClaimType, GapReason, Specificity
+
+
+class ExtractedClaim(BaseModel):
+    type: ClaimType
+    specificity: Specificity
+    cited_ref_ids: list[str] = Field(default_factory=list)
+    raw_text: str
+    raw_sentence_id: int
+
+
+class DecompositionOutput(BaseModel):
+    claims: list[ExtractedClaim]
+
+
+class LocatorDecision(BaseModel):
+    fully_describes: bool = False
+    is_itself_shortcut: bool = False
+    new_cited_refs: list[str] = Field(default_factory=list)
+
+
+class AssemblyItem(BaseModel):
+    claim_id: str
+    text: str = ""
+
+
+class AssemblyOutput(BaseModel):
+    sections: dict[str, list[AssemblyItem]] = Field(default_factory=dict)
 
 
 class LocatorResult(BaseModel):
@@ -16,7 +43,7 @@ class LocatorResult(BaseModel):
 
 
 class ResolutionResult(BaseModel):
-    status: Literal["resolved", "terminal_gap"]
+    status: Literal["resolved", "inferred", "terminal_gap"]
     resolved_text: str | None = None
     chain: list[dict] = Field(default_factory=list)
     terminal_reason: GapReason | None = None

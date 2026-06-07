@@ -12,8 +12,9 @@ export function ScoreBreakdown({ scores }: { scores: SectionScore[] }) {
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted">
-        Per-section reproducibility. Procedure and sample-prep are weighted
-        highest because that&apos;s where most replication failures originate.
+        Percentage of extracted claims backed by original-paper text or
+        sentence-level evidence retrieved from a cited paper. Corpus inferences
+        are shown in the protocol but do not count as evidence-backed.
       </p>
       {scores.map((s) => (
         <div key={s.section} className="rounded-lg border border-border bg-white p-4">
@@ -21,7 +22,7 @@ export function ScoreBreakdown({ scores }: { scores: SectionScore[] }) {
             <div>
               <div className="font-medium capitalize">{s.section.replace(/_/g, " ")}</div>
               <div className="text-xs text-muted">
-                {s.n_resolved} / {s.n_claims} resolved
+                {s.n_resolved} / {s.n_claims} evidence-backed
               </div>
             </div>
             <div className={cn("text-2xl font-serif", scoreColor(s.score))}>

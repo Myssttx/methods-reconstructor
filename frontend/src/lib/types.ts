@@ -20,11 +20,14 @@ export type ResolutionStatus =
   | "unresolved"
   | "resolving"
   | "resolved"
+  | "inferred"
   | "terminal_gap";
 
 export type GapReason =
   | "depth_exceeded"
   | "paywall_or_dead"
+  | "source_unavailable"
+  | "reference_unresolved"
   | "no_match_in_cited"
   | "no_reference"
   | "parsing_failed";
@@ -71,7 +74,9 @@ export interface ReconstructedProtocol {
   job_id: string;
   source_paper_id: string;
   title: string;
+  methods_evidence_score: number;
   reproducibility_score: number;
+  score_methodology: string;
   section_scores: SectionScore[];
   sections: Record<string, Claim[]>;
   gaps: Gap[];
@@ -83,4 +88,18 @@ export interface AgentEvent {
   type: string;
   timestamp: string;
   data: Record<string, unknown>;
+}
+
+export interface ReconstructionJob {
+  job_id: string;
+  status:
+    | "pending"
+    | "ingesting"
+    | "decomposing"
+    | "resolving"
+    | "assembling"
+    | "complete"
+    | "failed";
+  protocol_id: string | null;
+  error: string | null;
 }

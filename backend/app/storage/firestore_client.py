@@ -50,24 +50,24 @@ class LocalFileStore(JobStore):
     async def put_job(self, job: dict[str, Any]) -> None:
         async with self._lock:
             path = self._job_path(job["job_id"])
-            path.write_text(json.dumps(job, indent=2, default=str))
+            await asyncio.to_thread(_atomic_json_write, path, job)
 
     async def get_job(self, job_id: str) -> dict[str, Any] | None:
         path = self._job_path(job_id)
         if not path.exists():
             return None
-        return json.loads(path.read_text())
+        return await asyncio.to_thread(_json_read, path)
 
     async def put_reconstruction(self, protocol: dict[str, Any]) -> None:
         async with self._lock:
             path = self._reconstruction_path(protocol["protocol_id"])
-            path.write_text(json.dumps(protocol, indent=2, default=str))
+            await asyncio.to_thread(_atomic_json_write, path, protocol)
 
     async def get_reconstruction(self, protocol_id: str) -> dict[str, Any] | None:
         path = self._reconstruction_path(protocol_id)
         if not path.exists():
             return None
-        return json.loads(path.read_text())
+        return await asyncio.to_thread(_json_read, path)
 
 
 _store: JobStore | None = None
@@ -120,3 +120,13 @@ class GCPFirestoreStore(JobStore):
         col = self.settings.firestore_collection_reconstructions
         doc = await asyncio.to_thread(self.client.collection(col).document(protocol_id).get)
         return doc.to_dict() if doc.exists else None
+
+
+def _atomic_json_write(path: Path, value: dict[str, Any]) -> None:
+    temporary = path.with_suffix(f"{path.suffix}.tmp")
+    temporary.write_text(json.dumps(value, indent=2, default=str))
+    temporary.replace(path)
+
+
+def _json_read(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text())

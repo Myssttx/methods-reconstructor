@@ -65,14 +65,17 @@ async def fetch_pmc(pmc_id: str) -> Paper | None:
     if abstract:
         sections["abstract"] = Section(name="abstract", text=abstract)
 
-    methods_text_parts: list[str] = []
+    method_sections = []
     for sec in article.findall(".//sec"):
         title_node = sec.find("title")
         if title_node is None:
             continue
         sec_title = (title_node.text or "").strip().lower()
         if any(k in sec_title for k in ["method", "material", "experimental"]):
-            methods_text_parts.append("".join(sec.itertext()).strip())
+            if any(ancestor in method_sections for ancestor in sec.iterancestors("sec")):
+                continue
+            method_sections.append(sec)
+    methods_text_parts = ["".join(sec.itertext()).strip() for sec in method_sections]
     if methods_text_parts:
         sections["methods"] = Section(name="methods", text="\n\n".join(methods_text_parts))
 

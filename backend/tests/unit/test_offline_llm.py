@@ -35,6 +35,18 @@ async def test_decompose_classifies_shortcut(llm):
 
 
 @pytest.mark.asyncio
+async def test_decompose_preserves_grobid_reference_ids(llm):
+    prompt = (
+        "Methods section:\n"
+        "[0] Images were segmented as described previously [b27].\n\n"
+        "OUTPUT FORMAT: JSON.\n"
+    )
+    out = await llm.complete(prompt=prompt)
+    claims = json.loads(out)["claims"]
+    assert claims[0]["cited_ref_ids"] == ["b27"]
+
+
+@pytest.mark.asyncio
 async def test_decompose_classifies_standard(llm):
     prompt = "Methods section:\n[0] Mice were housed under standard conditions.\n\nOUTPUT FORMAT: JSON."
     out = await llm.complete(prompt=prompt)

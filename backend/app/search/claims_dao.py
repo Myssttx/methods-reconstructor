@@ -42,6 +42,18 @@ async def bulk_index_claims(claims: list[Claim], embeddings: list[list[float]] |
     log.info("claims.bulk_indexed", n=len(claims))
 
 
+async def delete_claims_for_paper(paper_id: str) -> None:
+    """Replace a paper's claim set instead of accumulating duplicate runs."""
+    settings = get_settings()
+    es = get_es()
+    await es.delete_by_query(
+        index=settings.elastic_claims_index,
+        query={"term": {"paper_id": paper_id}},
+        conflicts="proceed",
+        refresh=True,
+    )
+
+
 async def claims_for_paper(paper_id: str) -> list[dict[str, Any]]:
     settings = get_settings()
     es = get_es()

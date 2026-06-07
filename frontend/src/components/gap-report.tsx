@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils";
 const REASON_LABEL: Record<string, string> = {
   depth_exceeded: "Citation chain too deep (>5)",
   paywall_or_dead: "Cited paper unavailable",
+  source_unavailable: "Full methods text unavailable",
+  reference_unresolved: "Bibliography entry could not be resolved",
   no_match_in_cited: "No matching procedure in cited paper",
   no_reference: "No explicit citation",
   parsing_failed: "Could not parse the cited paper",
@@ -13,7 +15,7 @@ export function GapReport({ gaps }: { gaps: Gap[] }) {
   if (gaps.length === 0) {
     return (
       <div className="rounded-lg border border-accent/30 bg-accentSoft/40 p-6 text-sm">
-        No gaps. Every methodological claim resolved to source-paper detail.
+        No terminal gaps were found. Review any corpus-inferred claims separately.
       </div>
     );
   }

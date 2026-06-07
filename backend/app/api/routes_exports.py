@@ -51,7 +51,10 @@ def _to_markdown(proto: dict) -> str:
         f"# Reconstructed Protocol: {proto.get('title', '')}",
         "",
         f"**Source paper:** `{proto.get('source_paper_id')}`",
-        f"**Reproducibility score:** {proto.get('reproducibility_score', 0)} / 100",
+        f"**Methods evidence coverage:** "
+        f"{proto.get('methods_evidence_score', proto.get('reproducibility_score', 0))} / 100",
+        "",
+        str(proto.get("score_methodology", "")),
         "",
         "## Section scores",
         "",
@@ -66,6 +69,8 @@ def _to_markdown(proto: dict) -> str:
         for c in claims:
             text = c.get("resolved_text") or c.get("raw_text", "")
             lines.append(f"- {text}")
+            if c.get("resolution_status") == "inferred":
+                lines.append("  - *Corpus inference; not evidence-backed.*")
             chain = c.get("resolution_chain") or []
             if chain:
                 src = chain[-1].get("source_paper_id", "?")

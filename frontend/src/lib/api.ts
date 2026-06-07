@@ -1,3 +1,5 @@
+import type { ReconstructionJob } from "./types";
+
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
 async function jsonOrThrow<T>(p: Promise<Response>): Promise<T> {
@@ -26,7 +28,7 @@ export async function fetchProtocol(jobId: string) {
   return jsonOrThrow(fetch(`${BASE}/api/reconstructions/${jobId}/protocol`));
 }
 
-export async function fetchJob(jobId: string) {
+export async function fetchJob(jobId: string): Promise<ReconstructionJob> {
   return jsonOrThrow(fetch(`${BASE}/api/reconstructions/${jobId}`));
 }
 

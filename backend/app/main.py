@@ -6,7 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import __version__
 from app.api import routes_exports, routes_papers, routes_reconstructions
 from app.config import get_settings
+from app.llm.gemini_client import active_llm_provider
 from app.logging import configure_logging, get_logger
+from app.search.elastic_client import close_es
 
 settings = get_settings()
 configure_logging()
@@ -15,8 +17,9 @@ log = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    log.info("startup", env=settings.app_env, llm=settings.resolved_llm_provider)
+    log.info("startup", env=settings.app_env, llm=active_llm_provider())
     yield
+    await close_es()
     log.info("shutdown")
 
 
@@ -41,7 +44,7 @@ async def health():
     return {
         "status": "ok",
         "version": __version__,
-        "llm_provider": settings.resolved_llm_provider,
+        "llm_provider": active_llm_provider(),
         "elastic_url": settings.elastic_url,
     }
 

@@ -19,6 +19,7 @@ from typing import Any
 import httpx
 
 from app.config import get_settings
+from app.llm.budget import charge_llm_text
 from app.logging import get_logger
 
 log = get_logger(__name__)
@@ -71,7 +72,7 @@ DATASET_HINTS = ["dataset", "GEO accession", "SRA", "Zenodo", "doi.org/10."]
 def _classify_specificity(sentence: str) -> tuple[str, list[str]]:
     cited: list[str] = []
     # find inline ref tokens like [ref_3] or [12]
-    for m in re.finditer(r"\[(ref_\d+|\d+)\]", sentence):
+    for m in re.finditer(r"\[(ref_\d+|b\d+|\d+)\]", sentence):
         cited.append(m.group(1))
     s = sentence.lower()
     for pat in SHORTCUT_PATTERNS:
@@ -116,15 +117,19 @@ class OfflineLLM(LLMClient):
         system: str | None = None,
         temperature: float = 0.2,
     ) -> str:
+        charge_llm_text(f"{system or ''}\n{prompt}")
         # The agent calls into the offline LLM with a small set of stable prompts.
         # We branch on substring markers in the prompt body.
         if "Methods section:" in prompt:
-            return self._fake_decompose(prompt)
-        if "ORIGINAL_CLAIM" in prompt and "CANDIDATE_PASSAGE" in prompt:
-            return self._fake_locator(prompt)
-        if "Source paper:" in prompt and "Claims (JSON):" in prompt:
-            return self._fake_assemble(prompt)
-        return json.dumps({"unhandled": True, "preview": prompt[:200]})
+            response = self._fake_decompose(prompt)
+        elif "ORIGINAL_CLAIM" in prompt and "CANDIDATE_PASSAGE" in prompt:
+            response = self._fake_locator(prompt)
+        elif "Source paper:" in prompt and "Claims (JSON):" in prompt:
+            response = self._fake_assemble(prompt)
+        else:
+            response = json.dumps({"unhandled": True, "preview": prompt[:200]})
+        charge_llm_text(response)
+        return response
 
     @staticmethod
     def _extract_methods_block(prompt: str) -> str:
@@ -258,6 +263,7 @@ class GeminiLLM(LLMClient):
         temperature: float = 0.2,
     ) -> str:
         model_name = self.pro if model == "pro" else self.flash
+        charge_llm_text(f"{system or ''}\n{prompt}")
         cfg: dict[str, Any] = {"temperature": temperature}
         if response_format == "json":
             cfg["response_mime_type"] = "application/json"
@@ -269,7 +275,9 @@ class GeminiLLM(LLMClient):
             contents=prompt,
             config=cfg,
         )
-        return resp.text or ""
+        text = resp.text or ""
+        charge_llm_text(text)
+        return text
 
 
 class VertexADCGeminiLLM(LLMClient):
@@ -328,6 +336,7 @@ class VertexADCGeminiLLM(LLMClient):
         temperature: float = 0.2,
     ) -> str:
         model_name = self.pro if model == "pro" else self.flash
+        charge_llm_text(f"{system or ''}\n{prompt}")
         url = (
             "https://aiplatform.googleapis.com/v1/"
             f"projects/{self.project_id}/locations/{self.location}/"
@@ -357,7 +366,9 @@ class VertexADCGeminiLLM(LLMClient):
             payload = resp.json()
 
         parts = payload.get("candidates", [{}])[0].get("content", {}).get("parts", [])
-        return "\n".join(part.get("text", "") for part in parts if part.get("text"))
+        text = "\n".join(part.get("text", "") for part in parts if part.get("text"))
+        charge_llm_text(text)
+        return text
 
 
 class AnthropicLLM(LLMClient):
@@ -375,6 +386,7 @@ class AnthropicLLM(LLMClient):
         system: str | None = None,
         temperature: float = 0.2,
     ) -> str:
+        charge_llm_text(f"{system or ''}\n{prompt}")
         model_id = "claude-opus-4-5" if model == "pro" else "claude-haiku-4-5-20251001"
         resp = await self.client.messages.create(
             model=model_id,
@@ -384,7 +396,9 @@ class AnthropicLLM(LLMClient):
             messages=[{"role": "user", "content": prompt}],
         )
         parts = [b.text for b in resp.content if hasattr(b, "text")]
-        return "\n".join(parts)
+        text = "\n".join(parts)
+        charge_llm_text(text)
+        return text
 
 
 # ---------- Factory ----------
@@ -438,6 +452,17 @@ def get_llm() -> LLMClient:
     log.info("llm.init", provider="offline")
     _client = OfflineLLM()
     return _client
+
+
+def active_llm_provider() -> str:
+    client = get_llm()
+    if isinstance(client, GeminiLLM):
+        return "gemini"
+    if isinstance(client, VertexADCGeminiLLM):
+        return "vertex_adc"
+    if isinstance(client, AnthropicLLM):
+        return "anthropic"
+    return "offline"
 
 
 def new_uuid() -> str:

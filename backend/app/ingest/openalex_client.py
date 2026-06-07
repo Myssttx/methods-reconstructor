@@ -16,8 +16,10 @@ def parse_doi(s: str) -> str | None:
     s = s.strip()
     if s.lower().startswith("doi:"):
         s = s[4:]
-    m = re.search(r"10\.\d{4,9}/[^\s]+", s)
-    return m.group(0) if m else None
+    m = re.search(r"10\.\d{4,9}/[^\s?#]+", s, re.IGNORECASE)
+    if not m:
+        return None
+    return m.group(0).rstrip(".,;:)]}").lower()
 
 
 async def fetch_openalex_by_doi(doi: str) -> dict | None:
