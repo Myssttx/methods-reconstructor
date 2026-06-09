@@ -13,7 +13,6 @@ and handle the offline shape (which is already structured JSON).
 import asyncio
 import json
 import re
-import time
 import uuid
 from typing import Any
 
@@ -21,6 +20,7 @@ import httpx
 
 from app.config import get_settings
 from app.llm.budget import charge_llm_text
+from app.llm.google_auth import GoogleAccessTokenProvider
 from app.logging import get_logger
 
 log = get_logger(__name__)
@@ -308,56 +308,31 @@ class GeminiLLM(LLMClient):
 
 
 class VertexADCGeminiLLM(LLMClient):
-    """Gemini over Vertex AI REST using local Application Default Credentials."""
+    """Gemini over Vertex AI REST using local or Cloud Run ADC."""
 
     def __init__(
         self,
         *,
-        credentials_path: str,
+        credentials_path: str = "",
         project_id: str,
         location: str,
         pro_model: str,
         flash_model: str,
         request_timeout_seconds: float,
     ) -> None:
-        self.credentials_path = credentials_path
         self.project_id = project_id
         self.location = location or "global"
         self.pro = pro_model
         self.flash = flash_model
         self.request_timeout_seconds = request_timeout_seconds
-        self._access_token = ""
-        self._expires_at = 0.0
-        with open(credentials_path, encoding="utf-8") as f:
-            self.credentials = json.load(f)
-        if self.credentials.get("type") != "authorized_user":
-            raise ValueError("Only user ADC credentials are supported by this lightweight client")
-        self.quota_project_id = self.credentials.get("quota_project_id") or project_id
-        self._token_lock = asyncio.Lock()
+        self.auth = GoogleAccessTokenProvider(
+            credentials_path=credentials_path,
+            project_id=project_id,
+        )
+        self.quota_project_id = self.auth.quota_project_id
 
     async def _token(self) -> str:
-        if self._access_token and time.time() < self._expires_at - 60:
-            return self._access_token
-        # H-8 fix: serialize refresh so concurrent callers don't all hit OAuth.
-        async with self._token_lock:
-            # Re-check after acquiring lock in case another coroutine refreshed.
-            if self._access_token and time.time() < self._expires_at - 60:
-                return self._access_token
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.post(
-                    "https://oauth2.googleapis.com/token",
-                    data={
-                        "client_id": self.credentials["client_id"],
-                        "client_secret": self.credentials["client_secret"],
-                        "refresh_token": self.credentials["refresh_token"],
-                        "grant_type": "refresh_token",
-                    },
-                )
-                resp.raise_for_status()
-                payload = resp.json()
-            self._access_token = payload["access_token"]
-            self._expires_at = time.time() + int(payload.get("expires_in", 3600))
-            return self._access_token
+        return await self.auth.token()
 
     async def complete(
         self,
@@ -495,7 +470,6 @@ def get_llm() -> LLMClient:
             return _client
         if (
             provider == "gemini"
-            and settings.adc_credentials_path
             and settings.resolved_gcp_project_id
         ):
             log.info(

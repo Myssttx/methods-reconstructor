@@ -22,7 +22,9 @@ jobs:
             pydantic-settings==2.6.0 httpx==0.27.2 elasticsearch==8.15.1 \
             sse-starlette==2.1.3 tenacity==9.0.0 python-multipart==0.0.12 \
             beautifulsoup4==4.12.3 lxml==5.3.0 arxiv==2.1.3 crossrefapi==1.6.0 \
-            redis==5.1.1 structlog==24.4.0 pytest==8.3.3 pytest-asyncio==0.24.0 \
+            redis==5.1.1 structlog==24.4.0 aiohttp==3.10.10 reportlab==4.2.5 \
+            google-cloud-firestore==2.19.0 \
+            pytest==8.3.3 pytest-asyncio==0.24.0 \
             ruff==0.7.0
       - name: Ruff
         working-directory: backend
@@ -42,10 +44,10 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: frontend/package.json
+          cache-dependency-path: frontend/package-lock.json
       - name: Install frontend deps
         working-directory: frontend
-        run: npm install --no-audit --no-fund
+        run: npm ci
       - name: Type check + build
         working-directory: frontend
         run: npm run build

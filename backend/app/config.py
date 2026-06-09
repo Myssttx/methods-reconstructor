@@ -24,6 +24,8 @@ class Settings(BaseSettings):
 
     # Auth (C-4: set API_KEY env var to enable X-API-Key protection)
     api_key: str = ""  # empty = open access (dev mode)
+    app_prompt_version: str = "2026-06-09"
+    llm_temperature: float = 0.0
 
     # GCP / Vertex (optional)
     gcp_project_id: str = ""
@@ -33,6 +35,7 @@ class Settings(BaseSettings):
     gemini_model_pro: str = "gemini-3.0-pro"
     gemini_model_flash: str = "gemini-3.0-flash"
     gemini_embedding_model: str = "text-embedding-005"
+    enable_vertex_embeddings: bool = False
 
     # LLM provider
     google_api_key: str = ""
@@ -103,7 +106,7 @@ class Settings(BaseSettings):
             return self.llm_provider
         if self.google_api_key:
             return "gemini"
-        if self.adc_credentials_path and self.resolved_gcp_project_id:
+        if self.resolved_gcp_project_id:
             return "gemini"
         if self.anthropic_api_key:
             return "anthropic"

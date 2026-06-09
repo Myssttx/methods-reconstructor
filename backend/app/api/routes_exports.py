@@ -1,3 +1,4 @@
+import asyncio
 import csv
 import io
 import json
@@ -6,7 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 
 from app.api.deps import require_api_key
+from app.exporting.pdf_export import collect_source_usage, render_protocol_pdf
 from app.logging import get_logger
+from app.search.papers_dao import get_paper
 from app.storage.firestore_client import get_store
 
 log = get_logger(__name__)
@@ -42,6 +45,19 @@ async def export(job_id: str, fmt: str):
             content=_gaps_to_csv(proto),
             media_type="text/csv",
             headers={"Content-Disposition": f'attachment; filename="gaps-{job_id}.csv"'},
+        )
+
+    if fmt == "pdf":
+        source_ids = list(collect_source_usage(proto))
+        source_documents = await asyncio.gather(*(get_paper(source_id) for source_id in source_ids))
+        source_metadata = {
+            source_id: document or {}
+            for source_id, document in zip(source_ids, source_documents, strict=True)
+        }
+        return Response(
+            content=render_protocol_pdf(proto, source_metadata),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="protocol-{job_id}.pdf"'},
         )
 
     raise HTTPException(status_code=400, detail=f"Unsupported format: {fmt}")

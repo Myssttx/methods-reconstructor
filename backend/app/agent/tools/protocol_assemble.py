@@ -94,6 +94,7 @@ async def assemble(paper: Paper, claims: list[Claim], job_id: str) -> Reconstruc
             system=PROTOCOL_ASSEMBLY_SYSTEM,
             model="pro",
             response_format="json",
+            temperature=settings.llm_temperature,
         )
         try:
             data = AssemblyOutput.model_validate(json.loads(resp))
@@ -154,6 +155,13 @@ async def assemble(paper: Paper, claims: list[Claim], job_id: str) -> Reconstruc
         sections=sections_out,
         gaps=gaps,
         generated_at=datetime.now(UTC).isoformat(),
+        generation_metadata={
+            "prompt_version": settings.app_prompt_version,
+            "temperature": settings.llm_temperature,
+            "decomposition_model": settings.gemini_model_flash,
+            "assembly_model": settings.gemini_model_pro,
+            "embedding_model": settings.gemini_embedding_model,
+        },
     )
 
 

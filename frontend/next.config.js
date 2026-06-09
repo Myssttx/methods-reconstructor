@@ -1,14 +1,15 @@
 /** @type {import('next').NextConfig} */
+const isGitHubPages = process.env.GITHUB_PAGES === "true";
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 const nextConfig = {
   reactStrictMode: true,
-  experimental: {},
-  async rewrites() {
-    return [
-      {
-        source: "/api/backend/:path*",
-        destination: `${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"}/api/:path*`,
-      },
-    ];
+  output: isGitHubPages ? "export" : undefined,
+  basePath,
+  assetPrefix: basePath || undefined,
+  trailingSlash: isGitHubPages,
+  images: {
+    unoptimized: true,
   },
 };
 

@@ -24,7 +24,7 @@ export function PaperInput({ examples }: { examples: Example[] }) {
     setError(null);
     try {
       const { job_id } = await startReconstruction(identifier.trim());
-      router.push(`/reconstruct/${job_id}`);
+      router.push(`/results?job=${encodeURIComponent(job_id)}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setBusy(false);

@@ -36,6 +36,7 @@ async def extract_claims(paper: Paper) -> list[Claim]:
             system=METHODS_DECOMPOSITION_SYSTEM,
             model="flash",
             response_format="json",
+            temperature=settings.llm_temperature,
         )
         try:
             output = DecompositionOutput.model_validate(json.loads(response))

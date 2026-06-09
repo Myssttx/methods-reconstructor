@@ -81,6 +81,7 @@ export interface ReconstructedProtocol {
   sections: Record<string, Claim[]>;
   gaps: Gap[];
   generated_at: string;
+  generation_metadata: Record<string, string | number>;
   version: string;
 }
 

@@ -1,4 +1,4 @@
-.PHONY: help dev up down logs build backend-shell frontend-shell test test-unit test-integration test-frontend lint eval clean elastic-init seed native-backend native-frontend native-elastic native-setup
+.PHONY: help dev up down logs build backend-shell frontend-shell test test-unit test-integration test-frontend lint eval variability training-export clean elastic-init seed native-backend native-frontend native-elastic native-setup
 
 # Use modern `docker compose` v2 (built into Docker Desktop) by default.
 # Override with `make DC=docker-compose ...` if you only have the deprecated v1 binary.
@@ -29,6 +29,8 @@ help:
 	@echo "  make test-frontend     — frontend tests"
 	@echo "  make lint              — ruff + mypy + eslint"
 	@echo "  make eval              — run eval harness"
+	@echo "  make variability ID=…  — repeat a full run and report consistency"
+	@echo "  make training-export   — export source-backed JSONL examples"
 	@echo "  make clean             — remove local state + caches"
 
 dev up:
@@ -68,7 +70,8 @@ native-setup:
 			"tenacity==9.0.0" "python-multipart==0.0.12" \
 			"beautifulsoup4==4.12.3" "lxml==5.3.0" \
 			"arxiv==2.1.3" "crossrefapi==1.6.0" \
-			"redis==5.1.1" "structlog==24.4.0" \
+			"redis==5.1.1" "structlog==24.4.0" "aiohttp==3.10.10" \
+			"reportlab==4.2.5" "google-cloud-firestore==2.19.0" \
 			"pytest==8.3.3" "pytest-asyncio==0.24.0"
 	cd frontend && npm install --no-audit --no-fund
 
@@ -106,7 +109,15 @@ lint:
 	cd frontend && npm run lint --silent || true
 
 eval:
-	cd backend && .venv/bin/python -m eval.run_eval
+	backend/.venv/bin/python eval/run_eval.py
+
+variability:
+	test -n "$(ID)" || { echo "Usage: make variability ID=fixture:paper_a"; exit 1; }
+	ELASTIC_URL=http://localhost:9200 \
+		backend/.venv/bin/python eval/run_variability.py "$(ID)" --runs "$(or $(RUNS),3)"
+
+training-export:
+	backend/.venv/bin/python eval/export_training_jsonl.py
 
 clean:
 	rm -rf .local_storage .local_data backend/.pytest_cache backend/.ruff_cache backend/.mypy_cache frontend/.next frontend/node_modules

@@ -39,4 +39,5 @@ Thumbs.db
 dist/
 build/
 eval/reports/*.json
+eval/reports/*.jsonl
 !eval/reports/.gitkeep

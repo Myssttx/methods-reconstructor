@@ -42,7 +42,7 @@ export async function fetchFixtures(): Promise<{ fixtures: string[] }> {
   return jsonOrThrow(fetch(`${BASE}/api/papers/_/fixtures`, { headers: authHeaders() }));
 }
 
-export function exportUrl(jobId: string, fmt: "json" | "md" | "csv"): string {
+export function exportUrl(jobId: string, fmt: "pdf" | "json" | "md" | "csv"): string {
   // Export is a direct browser navigation — append key as query param for simplicity.
   const url = `${BASE}/api/reconstructions/${jobId}/export.${fmt}`;
   return API_KEY ? `${url}?api_key=${API_KEY}` : url;
