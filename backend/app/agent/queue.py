@@ -1,10 +1,12 @@
 import asyncio
 import json
 import uuid
+
 import redis.asyncio as redis
+
+from app.agent.schemas import AgentEvent
 from app.config import get_settings
 from app.logging import get_logger
-from app.agent.schemas import AgentEvent
 
 log = get_logger(__name__)
 _redis_pool = None
@@ -47,6 +49,7 @@ async def worker_loop():
     from app.search.indexes import ensure_indexes
     r = get_redis()
     await ensure_indexes()
+    _bg_tasks = set()
     log.info("queue.worker_started", msg="Waiting for jobs on Redis queue")
     while True:
         try:
@@ -63,11 +66,13 @@ async def worker_loop():
                 def _redis_publish(event: AgentEvent):
                     ev_dict = event.model_dump()
                     ev_str = json.dumps(ev_dict)
-                    async def push():
+                    async def push(jid=job_id, estr=ev_str):  # noqa: B023
                         r2 = get_redis()
-                        await r2.rpush(f"job_history:{job_id}", ev_str)
-                        await r2.publish(f"job_events:{job_id}", ev_str)
-                    asyncio.create_task(push())
+                        await r2.rpush(f"job_history:{jid}", estr)
+                        await r2.publish(f"job_events:{jid}", estr)
+                    t = asyncio.create_task(push())
+                    _bg_tasks.add(t)
+                    t.add_done_callback(_bg_tasks.discard)
                 
                 runner._publish = _redis_publish
                 await runner.run()
