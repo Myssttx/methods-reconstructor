@@ -26,8 +26,8 @@ class Settings(BaseSettings):
     gcp_region: str = "us-central1"
     google_application_credentials: str = ""
     vertex_ai_location: str = "us-central1"
-    gemini_model_pro: str = "gemini-2.5-pro"
-    gemini_model_flash: str = "gemini-2.5-flash"
+    gemini_model_pro: str = "gemini-3.0-pro"
+    gemini_model_flash: str = "gemini-3.0-flash"
     gemini_embedding_model: str = "text-embedding-005"
 
     # LLM provider
