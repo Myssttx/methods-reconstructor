@@ -83,14 +83,8 @@ class AgentRunner:
             await self.store.put_job(job.model_dump(mode="json"))
             settings = get_settings()
             with token_budget(settings.app_per_paper_token_budget):
-                try:
-                    async with asyncio.timeout(settings.app_agent_timeout_seconds):
-                        await ensure_indexes()
-                        await self._run_inner(job)
-                except TimeoutError as e:
-                    raise RuntimeError(
-                        f"Reconstruction exceeded {settings.app_agent_timeout_seconds} seconds"
-                    ) from e
+                await ensure_indexes()
+                await self._run_inner(job)
         except Exception as e:
             error_message = _error_message(e)
             log.exception("runner.failed", error=error_message)
@@ -183,7 +177,16 @@ class AgentRunner:
                     ),
                 })
 
-        await asyncio.gather(*(resolve_one(claim) for claim in claims))
+        resolve_timeout = max(10, settings.app_agent_timeout_seconds - 60)
+        try:
+            async with asyncio.timeout(resolve_timeout):
+                await asyncio.gather(*(resolve_one(claim) for claim in claims))
+        except TimeoutError:
+            log.warning("runner.resolve_timeout", msg="Citation resolution timed out. Assembling partial protocol.")
+            for claim in claims:
+                if getattr(claim, "resolution_status", None) not in {ResolutionStatus.RESOLVED, ResolutionStatus.INFERRED, ResolutionStatus.TERMINAL_GAP}:
+                    claim.resolution_status = ResolutionStatus.TERMINAL_GAP
+
         await bulk_index_claims(claims, embeddings=embeddings)
 
         await self._set_status(job, JobStatus.ASSEMBLING, "Assembling reconstructed protocol")
