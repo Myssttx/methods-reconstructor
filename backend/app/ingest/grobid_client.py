@@ -187,11 +187,14 @@ def _method_divs(root: etree._Element) -> list[etree._Element]:
         heading = _first_child_text(div, "tei:head")
         if heading and METHOD_HEADING.search(heading):
             matched.append(div)
-    return [
+            
+    filtered_matches = [
         div
         for div in matched
         if not any(ancestor in matched for ancestor in div.iterancestors())
     ]
+    
+    return filtered_matches if filtered_matches else top_level
 
 
 def _first_child_text(root: etree._Element, path: str) -> str:
