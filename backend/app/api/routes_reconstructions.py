@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
-from app.agent.runner import JobCapacityError, get_runner, start_job
+from app.agent.queue import enqueue, subscribe
 from app.logging import get_logger
 from app.storage.firestore_client import get_store
 
@@ -18,13 +18,10 @@ class ReconstructionRequest(BaseModel):
 
 @router.post("")
 async def create_reconstruction(req: ReconstructionRequest):
-    try:
-        runner = start_job(req.identifier.strip())
-    except JobCapacityError as e:
-        raise HTTPException(status_code=429, detail=str(e)) from e
+    job_id = await enqueue(req.identifier.strip())
     return {
-        "job_id": runner.job_id,
-        "stream_url": f"/api/reconstructions/{runner.job_id}/stream",
+        "job_id": job_id,
+        "stream_url": f"/api/reconstructions/{job_id}/stream",
     }
 
 
@@ -39,18 +36,18 @@ async def get_job(job_id: str):
 
 @router.get("/{job_id}/stream")
 async def stream(job_id: str, request: Request):
-    runner = get_runner(job_id)
     store = get_store()
     job = await store.get_job(job_id)
-    if runner is None and job is None:
-        raise HTTPException(status_code=404, detail="Job not found")
+    if job is None:
+        # Allow streaming immediately if job isn't in Firestore yet
+        job = {}
 
     async def event_generator():
-        if runner is not None:
-            async for ev in runner.stream():
+        if job.get("status") not in {"complete", "failed"}:
+            async for ev in subscribe(job_id):
                 if await request.is_disconnected():
                     break
-                yield {"data": json.dumps(ev.model_dump())}
+                yield {"data": json.dumps(ev)}
             return
 
         status = job.get("status")

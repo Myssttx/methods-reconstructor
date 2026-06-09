@@ -59,6 +59,26 @@ services:
       - ~/.config/gcloud/application_default_credentials.json:/gcp/application_default_credentials.json:ro
     command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
+  worker:
+    build: ./backend
+    env_file: ./.env
+    environment:
+      - ELASTIC_URL=http://elasticsearch:9200
+      - REDIS_HOST=redis
+      - GROBID_URL=http://grobid:8070
+      - GOOGLE_APPLICATION_CREDENTIALS=/gcp/application_default_credentials.json
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - ./infra:/app/infra:ro
+      - ./.local_storage:/app/.local_storage
+      - ~/.config/gcloud/application_default_credentials.json:/gcp/application_default_credentials.json:ro
+    command: python -m app.agent.queue
+
   frontend:
     build: ./frontend
     env_file: ./.env
