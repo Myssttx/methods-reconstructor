@@ -95,6 +95,14 @@ resolution from corpus inference, enforces job limits, and persists completed re
 The local worker registry is still process-local; production deployment needs a durable
 queue for jobs that must survive worker restarts.
 
+## Future Improvements: Overcoming Paywalls
+
+A major challenge in automated scientific literature mining is encountering heavily-cited papers hidden behind paywalls. When the recursive citation resolver cannot fetch the full text, it creates a `source_unavailable` terminal gap. To fully reconstruct proprietary methodologies, the following roadmap is planned:
+
+1. **Unpaywall API Integration**: Query the Unpaywall API to automatically hunt down "Green Open Access" versions of paywalled papers (e.g., preprints uploaded to university repositories).
+2. **Institutional SSO / EZproxy Delegation**: Add an authentication layer allowing researchers to log into the agent using their university library credentials. The agent can then use their EZproxy session to legally access and parse paywalled articles.
+3. **Text and Data Mining (TDM) APIs**: Integrate dedicated publisher APIs (like Elsevier TDM or Crossref TDM) by allowing researchers to securely store their own TDM API keys, granting the agent legal access to the raw XML of proprietary papers.
+
 ## License
 
 Apache 2.0 — see [LICENSE](LICENSE).
