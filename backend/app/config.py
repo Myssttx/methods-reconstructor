@@ -1,4 +1,6 @@
+import json
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -67,11 +69,34 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.app_cors_origins.split(",") if o.strip()]
 
     @property
+    def adc_credentials_path(self) -> str:
+        if self.google_application_credentials:
+            configured = Path(self.google_application_credentials).expanduser()
+            if configured.is_file():
+                return str(configured)
+        default = Path.home() / ".config/gcloud/application_default_credentials.json"
+        return str(default) if default.is_file() else ""
+
+    @property
+    def resolved_gcp_project_id(self) -> str:
+        if self.gcp_project_id:
+            return self.gcp_project_id
+        if not self.adc_credentials_path:
+            return ""
+        try:
+            payload = json.loads(Path(self.adc_credentials_path).read_text())
+        except (OSError, json.JSONDecodeError):
+            return ""
+        return str(payload.get("quota_project_id") or "")
+
+    @property
     def resolved_llm_provider(self) -> str:
         """Choose actual provider based on what's configured."""
         if self.llm_provider != "auto":
             return self.llm_provider
         if self.google_api_key:
+            return "gemini"
+        if self.adc_credentials_path and self.resolved_gcp_project_id:
             return "gemini"
         if self.anthropic_api_key:
             return "anthropic"

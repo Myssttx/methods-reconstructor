@@ -44,6 +44,7 @@ services:
       - ELASTIC_URL=http://elasticsearch:9200
       - REDIS_HOST=redis
       - GROBID_URL=http://grobid:8070
+      - GOOGLE_APPLICATION_CREDENTIALS=/gcp/application_default_credentials.json
     ports:
       - "8000:8000"
     depends_on:

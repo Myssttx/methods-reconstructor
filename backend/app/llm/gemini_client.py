@@ -425,18 +425,18 @@ def get_llm() -> LLMClient:
             return _client
         if (
             provider == "gemini"
-            and settings.google_application_credentials
-            and settings.gcp_project_id
+            and settings.adc_credentials_path
+            and settings.resolved_gcp_project_id
         ):
             log.info(
                 "llm.init",
                 provider="vertex_adc",
-                project=settings.gcp_project_id,
+                project=settings.resolved_gcp_project_id,
                 location=settings.vertex_ai_location,
             )
             _client = VertexADCGeminiLLM(
-                credentials_path=settings.google_application_credentials,
-                project_id=settings.gcp_project_id,
+                credentials_path=settings.adc_credentials_path,
+                project_id=settings.resolved_gcp_project_id,
                 location=settings.vertex_ai_location,
                 pro_model=settings.gemini_model_pro,
                 flash_model=settings.gemini_model_flash,

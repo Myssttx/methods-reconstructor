@@ -46,7 +46,7 @@ This product exists because **Elastic does the heavy lifting** at three points t
 
 The local stack runs a real Elasticsearch 8.15 node via `docker-compose`. Production swaps that for Elastic Cloud — same client, same mappings.
 
-## Quick start (local, no cloud credentials needed)
+## Quick start
 
 ```bash
 git clone <repo>
@@ -60,7 +60,22 @@ make seed                # loads demo fixtures
 
 Then open http://localhost:3000.
 
-By default the LLM provider is **`offline`** — a deterministic mock returns structured plausible output so the demo runs without any API keys. To use real LLMs, set `GOOGLE_API_KEY` (Gemini) or `ANTHROPIC_API_KEY` (Claude) in `.env`.
+With `LLM_PROVIDER=auto`, the app uses Vertex AI when Google Cloud
+Application Default Credentials and a project are available. Otherwise it
+falls back to the deterministic offline provider.
+
+For local Vertex AI:
+
+```bash
+gcloud auth application-default login
+gcloud config set project YOUR_PROJECT_ID
+gcloud auth application-default set-quota-project YOUR_PROJECT_ID
+```
+
+Set `GCP_PROJECT_ID=YOUR_PROJECT_ID` in `.env`. Docker Compose mounts the
+standard ADC file into the backend container automatically. Direct Gemini API
+keys and Anthropic remain optional alternatives through `GOOGLE_API_KEY` and
+`ANTHROPIC_API_KEY`.
 
 ## Repo layout
 

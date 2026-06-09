@@ -76,7 +76,7 @@ native-elastic:
 	brew services start elastic/tap/elasticsearch-full 2>/dev/null || brew services start elasticsearch
 
 native-backend:
-	cd backend && ELASTIC_URL=http://localhost:9200 LLM_PROVIDER=offline \
+	cd backend && ELASTIC_URL=http://localhost:9200 \
 		.venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 native-frontend:
