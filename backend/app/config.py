@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     app_cors_origins: str = "http://localhost:3000"
     app_max_recursion_depth: int = 5
     app_per_paper_token_budget: int = 500_000
-    app_agent_timeout_seconds: int = 300
+    app_agent_timeout_seconds: int = 600
     app_max_concurrent_jobs: int = 2
     app_max_concurrent_claims: int = 4
     app_max_methods_chunk_chars: int = 40_000
@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     google_api_key: str = ""
     anthropic_api_key: str = ""
     llm_provider: Literal["auto", "gemini", "anthropic", "offline"] = "auto"
+    llm_request_timeout_seconds: float = 180.0
 
     # Elastic
     elastic_cloud_id: str = ""

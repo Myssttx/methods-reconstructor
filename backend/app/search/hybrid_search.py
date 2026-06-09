@@ -118,6 +118,7 @@ async def hybrid_claim_search(
     top_k: int = 5,
     filters: dict[str, Any] | None = None,
     exclude_paper_id: str | None = None,
+    exclude_paper_prefixes: tuple[str, ...] = (),
 ) -> list[dict[str, Any]]:
     """Corpus-wide hybrid search over claims (used for partial-claim augmentation)."""
     settings = get_settings()
@@ -128,6 +129,7 @@ async def hybrid_claim_search(
         for k, v in filters.items():
             must_filters.append({"term": {k: v}})
     must_not = [{"term": {"paper_id": exclude_paper_id}}] if exclude_paper_id else []
+    must_not.extend({"prefix": {"paper_id": prefix}} for prefix in exclude_paper_prefixes)
 
     bm25_resp = await es.search(
         index=settings.elastic_claims_index,

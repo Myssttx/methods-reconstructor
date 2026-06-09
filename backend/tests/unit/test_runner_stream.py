@@ -2,7 +2,11 @@ import asyncio
 
 import pytest
 
-from app.agent.runner import AgentRunner
+from app.agent.runner import AgentRunner, _error_message
+
+
+def test_error_message_falls_back_to_exception_type():
+    assert _error_message(TimeoutError()) == "TimeoutError"
 
 
 @pytest.mark.asyncio

@@ -42,6 +42,10 @@ def _now() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def _error_message(error: Exception) -> str:
+    return str(error).strip() or type(error).__name__
+
+
 class AgentRunner:
     def __init__(self, job_id: str, identifier: str) -> None:
         self.job_id = job_id
@@ -88,12 +92,13 @@ class AgentRunner:
                         f"Reconstruction exceeded {settings.app_agent_timeout_seconds} seconds"
                     ) from e
         except Exception as e:
-            log.exception("runner.failed", error=str(e))
+            error_message = _error_message(e)
+            log.exception("runner.failed", error=error_message)
             job.status = JobStatus.FAILED
-            job.error = str(e)
+            job.error = error_message
             job.updated_at = _now()
             await self.store.put_job(job.model_dump(mode="json"))
-            await self._emit("error", {"message": str(e)})
+            await self._emit("error", {"message": error_message})
         finally:
             self._done = True
             for queue in list(self._subscribers):

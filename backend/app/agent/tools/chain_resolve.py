@@ -176,6 +176,7 @@ async def _resolve_partial(claim: Claim) -> ResolutionResult:
         top_k=3,
         filters={"type": claim.type.value, "resolution_status": "resolved"},
         exclude_paper_id=claim.paper_id,
+        exclude_paper_prefixes=("fixture:",),
     )
     candidates = [
         c
@@ -203,6 +204,7 @@ async def _resolve_standard(claim: Claim) -> ResolutionResult:
         top_k=5,
         filters={"type": claim.type.value, "resolution_status": "resolved"},
         exclude_paper_id=claim.paper_id,
+        exclude_paper_prefixes=("fixture:",),
     )
     candidates = [
         c
@@ -248,8 +250,16 @@ def _has_meaningful_overlap(left: str, right: str) -> bool:
         "following",
         "briefly",
         "standard",
+        "above",
+        "described",
+        "used",
         "method",
         "methods",
+        "cell",
+        "cells",
+        "tissue",
+        "section",
+        "sections",
     }
     left_tokens = {
         token

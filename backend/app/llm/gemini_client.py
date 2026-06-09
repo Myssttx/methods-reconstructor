@@ -291,12 +291,14 @@ class VertexADCGeminiLLM(LLMClient):
         location: str,
         pro_model: str,
         flash_model: str,
+        request_timeout_seconds: float,
     ) -> None:
         self.credentials_path = credentials_path
         self.project_id = project_id
         self.location = location or "global"
         self.pro = pro_model
         self.flash = flash_model
+        self.request_timeout_seconds = request_timeout_seconds
         self._access_token = ""
         self._expires_at = 0.0
         with open(credentials_path, encoding="utf-8") as f:
@@ -352,18 +354,30 @@ class VertexADCGeminiLLM(LLMClient):
             body["systemInstruction"] = {"parts": [{"text": system}]}
 
         token = await self._token()
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            resp = await client.post(
-                url,
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json",
-                    "x-goog-user-project": self.quota_project_id,
-                },
-                json=body,
-            )
-            resp.raise_for_status()
-            payload = resp.json()
+        timeout = httpx.Timeout(
+            self.request_timeout_seconds,
+            connect=30.0,
+            write=30.0,
+            pool=30.0,
+        )
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                resp = await client.post(
+                    url,
+                    headers={
+                        "Authorization": f"Bearer {token}",
+                        "Content-Type": "application/json",
+                        "x-goog-user-project": self.quota_project_id,
+                    },
+                    json=body,
+                )
+        except httpx.TimeoutException as e:
+            raise RuntimeError(
+                f"Vertex AI request to {model_name} timed out after "
+                f"{self.request_timeout_seconds:g} seconds"
+            ) from e
+        resp.raise_for_status()
+        payload = resp.json()
 
         parts = payload.get("candidates", [{}])[0].get("content", {}).get("parts", [])
         text = "\n".join(part.get("text", "") for part in parts if part.get("text"))
@@ -440,6 +454,7 @@ def get_llm() -> LLMClient:
                 location=settings.vertex_ai_location,
                 pro_model=settings.gemini_model_pro,
                 flash_model=settings.gemini_model_flash,
+                request_timeout_seconds=settings.llm_request_timeout_seconds,
             )
             return _client
         if provider == "anthropic" and settings.anthropic_api_key:

@@ -34,7 +34,7 @@ async def extract_claims(paper: Paper) -> list[Claim]:
         response = await llm.complete(
             prompt=user_prompt,
             system=METHODS_DECOMPOSITION_SYSTEM,
-            model="pro",
+            model="flash",
             response_format="json",
         )
         try:

@@ -53,7 +53,7 @@ async def test_partial_claim_uses_other_papers_only_and_stays_inferred(monkeypat
         claim_id="claim-2",
         paper_id="paper-source",
         type=ClaimType.PROCEDURE,
-        raw_text="Cells were briefly washed.",
+        raw_text="Cells were washed twice.",
         specificity=Specificity.PARTIALLY_DESCRIBED,
     )
     captured = {}
@@ -86,6 +86,7 @@ async def test_partial_claim_uses_other_papers_only_and_stays_inferred(monkeypat
 
     assert result.status == "inferred"
     assert captured["exclude_paper_id"] == "paper-source"
+    assert captured["exclude_paper_prefixes"] == ("fixture:",)
     assert captured["filters"]["resolution_status"] == "resolved"
 
 
@@ -108,6 +109,10 @@ def test_corpus_inference_requires_method_specific_overlap():
     assert not chain_resolve._has_meaningful_overlap(
         "Cells were segmented with Ilastik and CellProfiler.",
         "Reads were aligned to the mouse genome with STAR.",
+    )
+    assert not chain_resolve._has_meaningful_overlap(
+        "The above described antibody panel was used to stain tissue sections.",
+        "Cortical tissue was dissociated into single-cell suspensions as described.",
     )
 
 

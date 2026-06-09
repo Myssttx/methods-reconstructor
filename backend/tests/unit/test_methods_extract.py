@@ -61,3 +61,42 @@ async def test_fabricated_claim_text_is_rejected(monkeypatch):
 
     with pytest.raises(RuntimeError, match="no methodological claims"):
         await extract_claims(paper)
+
+
+@pytest.mark.asyncio
+async def test_decomposition_uses_flash_model(monkeypatch):
+    requested_models = []
+
+    class RecordingLLM:
+        async def complete(self, **kwargs):
+            requested_models.append(kwargs["model"])
+            return json.dumps(
+                {
+                    "claims": [
+                        {
+                            "type": "procedure",
+                            "specificity": "fully_described",
+                            "cited_ref_ids": [],
+                            "raw_text": "Cells were washed twice with PBS.",
+                            "raw_sentence_id": 0,
+                        }
+                    ]
+                }
+            )
+
+    monkeypatch.setattr(methods_extract, "get_llm", lambda: RecordingLLM())
+    paper = Paper(
+        paper_id="paper",
+        source=PaperSource.UPLOAD,
+        title="Paper",
+        sections={
+            "methods": Section(
+                name="methods",
+                text="[0] Cells were washed twice with PBS.",
+            )
+        },
+    )
+
+    await extract_claims(paper)
+
+    assert requested_models == ["flash"]

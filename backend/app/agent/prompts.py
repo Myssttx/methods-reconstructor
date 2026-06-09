@@ -101,22 +101,14 @@ OUTPUT FORMAT:
 JSON with structure:
 {{
   "sections": {{
-    "reagents": [{{"claim_id": "...", "text": "..."}}],
+    "reagents": [{{"claim_id": "..."}}],
     "equipment": [...],
     "sample_prep": [...],
     "procedure": [...],
     "analysis": [...],
     "software": [...],
     "datasets": [...]
-  }},
-  "gap_report": [
-    {{
-      "claim_id": "...",
-      "raw_text": "...",
-      "reason": "...",
-      "suggested_action": "..."
-    }}
-  ]
+  }}
 }}
 """
 

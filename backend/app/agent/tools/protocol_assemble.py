@@ -68,7 +68,18 @@ def compute_scores(claims: list[Claim]) -> tuple[float, list[SectionScore]]:
 
 
 async def assemble(paper: Paper, claims: list[Claim], job_id: str) -> ReconstructedProtocol:
-    claims_payload = json.dumps([c.model_dump(mode="json") for c in claims])
+    claims_payload = json.dumps(
+        [
+            {
+                "claim_id": claim.claim_id,
+                "type": claim.type.value,
+                "raw_text": claim.raw_text,
+                "resolved_text": claim.resolved_text,
+                "resolution_status": claim.resolution_status.value,
+            }
+            for claim in claims
+        ]
+    )
     settings = get_settings()
     data = AssemblyOutput()
     if len(claims_payload) <= settings.app_max_assembly_chars:
