@@ -44,4 +44,5 @@ dist/
 build/
 eval/reports/*.json
 eval/reports/*.jsonl
+eval/reports/*/
 !eval/reports/.gitkeep

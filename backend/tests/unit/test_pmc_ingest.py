@@ -1,7 +1,10 @@
+from unittest.mock import AsyncMock
+
+import httpx
 import pytest
 from lxml import etree
 
-from app.ingest import pipeline
+from app.ingest import pipeline, pmc_client
 from app.ingest.pmc_client import _extract_methods_text
 from app.models import Paper, PaperSource, Section
 
@@ -72,3 +75,28 @@ def test_pmc_methods_keep_paragraphs_and_reference_ids_but_skip_tables_and_figur
     assert "Samples were centrifuged" in methods
     assert "catalog table" not in methods
     assert "Figure caption" not in methods
+
+
+@pytest.mark.asyncio
+async def test_pmc_request_retries_rate_limit(monkeypatch):
+    request = httpx.Request("GET", pmc_client.EFETCH)
+    responses = [
+        httpx.Response(429, request=request, headers={"Retry-After": "0"}),
+        httpx.Response(200, request=request, content=b"<article/>"),
+    ]
+    client = AsyncMock()
+    client.get = AsyncMock(side_effect=responses)
+    client.__aenter__.return_value = client
+    client.__aexit__.return_value = None
+
+    monkeypatch.setattr(pmc_client.httpx, "AsyncClient", lambda **_kwargs: client)
+    monkeypatch.setattr(pmc_client, "_wait_for_request_slot", AsyncMock())
+
+    response = await pmc_client._get_with_retry(
+        pmc_client.EFETCH,
+        params={"db": "pmc", "id": "123"},
+        timeout=1.0,
+    )
+
+    assert response.status_code == 200
+    assert client.get.await_count == 2

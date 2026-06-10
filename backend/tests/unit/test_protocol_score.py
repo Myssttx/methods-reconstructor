@@ -121,3 +121,33 @@ async def test_default_assembly_is_deterministic_and_does_not_call_llm(monkeypat
 
     assert protocol.sections["procedure"] == [claim]
     assert protocol.generation_metadata["assembly_mode"] == "deterministic"
+
+
+@pytest.mark.asyncio
+async def test_gap_preserves_claim_pathway_metadata(monkeypatch):
+    monkeypatch.setattr(
+        protocol_assemble,
+        "get_settings",
+        lambda: Settings(app_use_llm_assembly=False),
+    )
+    claim = _c(
+        ClaimType.PROCEDURE,
+        ResolutionStatus.TERMINAL_GAP,
+        spec=Specificity.SHORTCUT_CITATION,
+    )
+    claim.cited_ref_ids = ["R12"]
+
+    protocol = await protocol_assemble.assemble(
+        Paper(
+            paper_id="paper",
+            source=PaperSource.UPLOAD,
+            title="Paper",
+        ),
+        [claim],
+        job_id="job",
+    )
+
+    gap = protocol.gaps[0]
+    assert gap.type == "procedure"
+    assert gap.specificity == "shortcut_citation"
+    assert gap.cited_ref_ids == ["R12"]

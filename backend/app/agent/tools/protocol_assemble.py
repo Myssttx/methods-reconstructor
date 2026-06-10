@@ -144,6 +144,9 @@ async def assemble(paper: Paper, claims: list[Claim], job_id: str) -> Reconstruc
             Gap(
                 claim_id=claim.claim_id,
                 raw_text=claim.raw_text,
+                type=claim.type.value,
+                specificity=claim.specificity.value,
+                cited_ref_ids=claim.cited_ref_ids,
                 reason=reason.value,
                 chain_trace=[step.model_dump() for step in claim.resolution_chain],
                 suggested_action=_suggest_action(reason),

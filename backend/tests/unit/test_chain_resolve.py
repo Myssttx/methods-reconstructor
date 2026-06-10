@@ -121,6 +121,32 @@ def test_corpus_inference_requires_method_specific_overlap():
         "The above described antibody panel was used to stain tissue sections.",
         "Cortical tissue was dissociated into single-cell suspensions as described.",
     )
+    assert not chain_resolve._has_meaningful_overlap(
+        "SCC9 cells in 24-well plates were infected for 36 hours.",
+        "Sorted cells were incubated for 3 hours in 96-well plates.",
+    )
+    assert not chain_resolve._has_meaningful_overlap(
+        "Human tumor samples were dissociated per manufacturer guidelines.",
+        "Human samples and mouse models.",
+    )
+
+
+def test_corpus_inference_requires_resolved_evidence_to_match():
+    claim_text = "Cells were segmented into tumor and stroma masks."
+    assert chain_resolve._candidate_supports_claim(
+        claim_text,
+        {
+            "raw_text": "Tumor cells were segmented into object masks.",
+            "resolved_text": "Object masks were segmented with CellProfiler.",
+        },
+    )
+    assert not chain_resolve._candidate_supports_claim(
+        claim_text,
+        {
+            "raw_text": "Tumor cells were segmented into object masks.",
+            "resolved_text": "Sorted cells were incubated with peptide.",
+        },
+    )
 
 
 @pytest.mark.asyncio

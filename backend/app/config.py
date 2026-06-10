@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     app_large_methods_sentence_threshold: int = 40
     app_max_assembly_chars: int = 100_000
     app_max_queue_depth: int = 50  # C-5: max pending jobs in Redis queue
+    app_negative_acquisition_cache_seconds: int = 3_600
 
     # Auth (C-4: set API_KEY env var to enable X-API-Key protection)
     api_key: str = ""  # empty = open access (dev mode)
@@ -76,6 +77,8 @@ class Settings(BaseSettings):
     openalex_email: str = ""
     semantic_scholar_api_key: str = ""
     unpaywall_email: str = ""
+    ncbi_email: str = ""
+    ncbi_api_key: str = ""
     grobid_url: str = "http://localhost:8070"
 
     # Local fallback paths

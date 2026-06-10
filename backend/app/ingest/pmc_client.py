@@ -1,12 +1,15 @@
 """PubMed Central — full-text XML via E-utilities efetch."""
 
+import asyncio
 import copy
 import re
 from datetime import UTC, datetime
+from time import monotonic
 
 import httpx
 from lxml import etree
 
+from app.config import get_settings
 from app.logging import get_logger
 from app.models import Author, Paper, PaperSource, Reference, Section
 
@@ -14,6 +17,10 @@ log = get_logger(__name__)
 
 EFETCH = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
 IDCONV = "https://pmc.ncbi.nlm.nih.gov/tools/idconv/api/v1/articles/"
+_RETRYABLE_STATUS = {429, 500, 502, 503, 504}
+_MAX_RETRIES = 4
+_request_lock = asyncio.Lock()
+_last_request_at = 0.0
 
 
 def parse_pmc_id(s: str) -> str | None:
@@ -27,18 +34,19 @@ def parse_pmc_id(s: str) -> str | None:
 
 
 async def find_pmc_by_doi(doi: str) -> str | None:
+    settings = get_settings()
+    params = {
+        "ids": doi,
+        "format": "json",
+        "tool": "methods-reconstructor",
+    }
+    if settings.ncbi_email:
+        params["email"] = settings.ncbi_email
+    if settings.ncbi_api_key:
+        params["api_key"] = settings.ncbi_api_key
     try:
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            response = await client.get(
-                IDCONV,
-                params={
-                    "ids": doi,
-                    "format": "json",
-                    "tool": "methods-reconstructor",
-                },
-            )
-            response.raise_for_status()
-            records = response.json().get("records") or []
+        response = await _get_with_retry(IDCONV, params=params, timeout=20.0)
+        records = response.json().get("records") or []
     except Exception as error:
         log.warning("pmc.idconv_failed", doi=doi, error=str(error))
         return None
@@ -48,11 +56,20 @@ async def find_pmc_by_doi(doi: str) -> str | None:
 
 async def fetch_pmc(pmc_id: str) -> Paper | None:
     pmc_id = pmc_id.replace("PMC", "")
-    params = {"db": "pmc", "id": pmc_id, "rettype": "xml"}
+    settings = get_settings()
+    params = {
+        "db": "pmc",
+        "id": pmc_id,
+        "rettype": "xml",
+        "retmode": "xml",
+        "tool": "methods-reconstructor",
+    }
+    if settings.ncbi_email:
+        params["email"] = settings.ncbi_email
+    if settings.ncbi_api_key:
+        params["api_key"] = settings.ncbi_api_key
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.get(EFETCH, params=params)
-            resp.raise_for_status()
+        resp = await _get_with_retry(EFETCH, params=params, timeout=30.0)
     except Exception as e:
         log.warning("pmc.fetch_failed", pmc_id=pmc_id, error=str(e))
         return None
@@ -121,6 +138,63 @@ async def fetch_pmc(pmc_id: str) -> Paper | None:
         full_text_available="methods" in sections,
         ingested_at=datetime.now(UTC).isoformat(),
     )
+
+
+async def _get_with_retry(
+    url: str,
+    *,
+    params: dict[str, str],
+    timeout: float,
+) -> httpx.Response:
+    """Respect NCBI request limits and retry transient failures."""
+    settings = get_settings()
+    last_error: Exception | None = None
+    for attempt in range(_MAX_RETRIES):
+        await _wait_for_request_slot(has_api_key=bool(settings.ncbi_api_key))
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                response = await client.get(url, params=params)
+            if response.status_code not in _RETRYABLE_STATUS:
+                response.raise_for_status()
+                return response
+            last_error = httpx.HTTPStatusError(
+                f"Transient PMC HTTP {response.status_code}",
+                request=response.request,
+                response=response,
+            )
+            retry_after = response.headers.get("Retry-After")
+            delay = float(retry_after) if retry_after else 2**attempt
+            log.warning(
+                "pmc.retry",
+                attempt=attempt + 1,
+                status=response.status_code,
+                delay_seconds=delay,
+            )
+        except (httpx.TimeoutException, httpx.TransportError) as error:
+            last_error = error
+            delay = 2**attempt
+            log.warning(
+                "pmc.retry",
+                attempt=attempt + 1,
+                error=type(error).__name__,
+                delay_seconds=delay,
+            )
+        if attempt < _MAX_RETRIES - 1:
+            await asyncio.sleep(delay)
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError("PMC request failed without a response")
+
+
+async def _wait_for_request_slot(*, has_api_key: bool) -> None:
+    """Serialize requests at NCBI's documented 3/s or 10/s limit."""
+    global _last_request_at
+    minimum_interval = 0.11 if has_api_key else 0.34
+    async with _request_lock:
+        wait_seconds = minimum_interval - (monotonic() - _last_request_at)
+        if wait_seconds > 0:
+            await asyncio.sleep(wait_seconds)
+        _last_request_at = monotonic()
 
 
 def _extract_methods_text(article: etree._Element) -> str:

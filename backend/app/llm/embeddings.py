@@ -20,6 +20,8 @@ log = get_logger(__name__)
 
 _MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 _DIM = 384
+_VERTEX_MAX_BATCH_ITEMS = 250
+_VERTEX_MAX_BATCH_CHARS = 60_000
 
 _model_lock = threading.Lock()
 _model = None
@@ -95,7 +97,10 @@ async def _vertex_embed(texts: list[str], *, task_type: str) -> list[list[float]
         return []
     settings = get_settings()
     project_id = settings.resolved_gcp_project_id
-    location = settings.vertex_ai_location or settings.gcp_region
+    location = _vertex_embedding_location(
+        settings.vertex_ai_location,
+        settings.gcp_region,
+    )
     auth = _vertex_auth(settings.adc_credentials_path, project_id)
     token = await auth.token()
     url = (
@@ -111,8 +116,7 @@ async def _vertex_embed(texts: list[str], *, task_type: str) -> list[list[float]
     )
     vectors: list[list[float]] = []
     async with httpx.AsyncClient(timeout=timeout) as client:
-        for start in range(0, len(texts), 5):
-            batch = texts[start : start + 5]
+        for batch in _embedding_batches(texts):
             response = await client.post(
                 url,
                 headers={
@@ -137,6 +141,34 @@ async def _vertex_embed(texts: list[str], *, task_type: str) -> list[list[float]
     if len(vectors) != len(texts) or any(len(vector) != _DIM for vector in vectors):
         raise RuntimeError("Vertex embedding response had an unexpected shape")
     return vectors
+
+
+def _embedding_batches(texts: list[str]) -> list[list[str]]:
+    """Pack requests below Vertex's item and aggregate token limits."""
+    batches: list[list[str]] = []
+    current: list[str] = []
+    current_chars = 0
+    for text in texts:
+        text_chars = len(text)
+        if current and (
+            len(current) >= _VERTEX_MAX_BATCH_ITEMS
+            or current_chars + text_chars > _VERTEX_MAX_BATCH_CHARS
+        ):
+            batches.append(current)
+            current = []
+            current_chars = 0
+        current.append(text)
+        current_chars += text_chars
+    if current:
+        batches.append(current)
+    return batches
+
+
+def _vertex_embedding_location(vertex_location: str, gcp_region: str) -> str:
+    """Embedding models use a regional endpoint even when Gemini uses global."""
+    if vertex_location and vertex_location != "global":
+        return vertex_location
+    return gcp_region or "us-central1"
 
 
 @lru_cache

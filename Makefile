@@ -125,7 +125,7 @@ variability:
 
 cancer-stress:
 	ELASTIC_URL=http://localhost:9200 \
-		backend/.venv/bin/python eval/run_cancer_stress.py
+		backend/.venv/bin/python eval/run_cancer_stress.py --runs "$(or $(RUNS),3)"
 
 training-export:
 	backend/.venv/bin/python eval/export_training_jsonl.py

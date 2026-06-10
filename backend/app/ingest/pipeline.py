@@ -14,6 +14,7 @@ import asyncio
 import re
 from datetime import UTC, datetime
 
+from app.config import get_settings
 from app.ingest import (
     arxiv_client,
     crossref_client,
@@ -119,6 +120,9 @@ async def _ingest_canonical(
             if cached and cached.methods_text():
                 log.info("ingest.elastic_cache_hit", paper_id=paper_id)
                 return cached
+            if cached and _negative_acquisition_cache_is_fresh(cached):
+                log.info("ingest.elastic_negative_cache_hit", paper_id=paper_id)
+                return cached
             paper = await fetcher()
             if paper is None:
                 return cached
@@ -127,6 +131,20 @@ async def _ingest_canonical(
             # Clean up lock entry to prevent unbounded memory growth.
             async with _ingest_lock_guard:
                 _ingest_locks.pop(paper_id, None)
+
+
+def _negative_acquisition_cache_is_fresh(paper: Paper) -> bool:
+    ttl_seconds = get_settings().app_negative_acquisition_cache_seconds
+    if ttl_seconds <= 0 or not paper.ingested_at:
+        return False
+    try:
+        ingested_at = datetime.fromisoformat(paper.ingested_at.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if ingested_at.tzinfo is None:
+        ingested_at = ingested_at.replace(tzinfo=UTC)
+    age_seconds = (datetime.now(UTC) - ingested_at.astimezone(UTC)).total_seconds()
+    return 0 <= age_seconds < ttl_seconds
 
 
 async def _fetch_arxiv(arxiv_id: str) -> Paper | None:

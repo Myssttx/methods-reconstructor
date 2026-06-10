@@ -38,17 +38,33 @@ model-generated labels would be methodologically weak and can reinforce errors.
 
 ## Cancer stress suite
 
-The repository includes a fixed set of complex public cancer papers covering
-single-cell sequencing, spatial transcriptomics, imaging mass cytometry, and
-multiplexed ion beam imaging:
+The repository includes ten PMC-hosted cancer papers covering single-cell
+sequencing, spatial transcriptomics, imaging mass cytometry, and multiplexed
+ion beam imaging:
 
 ```bash
 make cancer-stress
 ```
 
-Each result records ingestion, decomposition, indexing, resolution, assembly,
-and total time, plus claim count, gap rate, evidence coverage, and the exact
-failure message. The default performance target is two minutes per paper.
+Each paper runs three times by default. The report records ingestion,
+decomposition, indexing, resolution, assembly, and total time, plus claim
+variation, label agreement, extraction-path consistency, citation-chain depth,
+gap reasons, evidence coverage, and the exact failure message. The default
+performance target is two minutes per trial. A paper is marked stable only when
+claim counts, claim signatures, labels, gap counts, and processing modes are
+identical across all runs.
+
+Run one or more selected papers while debugging:
+
+```bash
+backend/.venv/bin/python eval/run_cancer_stress.py \
+  --identifier PMC5878932 \
+  --identifier PMC6703186 \
+  --runs 3
+```
+
+The measured June 10, 2026 baseline and paper list are in
+[`docs/CANCER_STRESS_RESULTS.md`](CANCER_STRESS_RESULTS.md).
 
 The default hybrid extractor uses Gemini below 40 source sentences and switches
 directly to deterministic, sentence-linked extraction at 40 sentences or more.

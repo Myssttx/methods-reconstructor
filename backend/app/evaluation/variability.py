@@ -13,8 +13,8 @@ def claims_from_protocol(protocol: dict[str, Any]) -> list[dict[str, Any]]:
         claims.append(
             {
                 "raw_text": gap.get("raw_text") or "",
-                "type": "gap",
-                "specificity": "terminal_gap",
+                "type": gap.get("type") or "gap",
+                "specificity": gap.get("specificity") or "terminal_gap",
                 "resolution_status": "terminal_gap",
             }
         )

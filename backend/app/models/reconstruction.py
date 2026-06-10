@@ -15,6 +15,9 @@ class SectionScore(BaseModel):
 class Gap(BaseModel):
     claim_id: str
     raw_text: str
+    type: str = ""
+    specificity: str = ""
+    cited_ref_ids: list[str] = Field(default_factory=list)
     reason: str
     chain_trace: list[dict[str, Any]] = Field(default_factory=list)
     suggested_action: str

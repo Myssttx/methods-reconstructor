@@ -136,7 +136,7 @@ useful, not more useful.
 
 - Deploy the ADK agent through Google Cloud's managed agent runtime.
 - Connect an Elastic Agent Builder MCP endpoint where supported.
-- Replace the process-local runner registry with a durable queue.
+- Add managed Redis, worker autoscaling, retry accounting, and a dead-letter queue.
 - Build a human-reviewed benchmark for claim type, citation resolution, and
   evidence coverage.
 - Add corpus-level citation dependency analytics in Elastic.
