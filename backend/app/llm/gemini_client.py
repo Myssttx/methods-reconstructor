@@ -25,6 +25,15 @@ from app.logging import get_logger
 
 log = get_logger(__name__)
 
+# Transient HTTP status codes worth retrying on.
+_RETRYABLE_STATUS = {429, 500, 502, 503, 504}
+_MAX_RETRIES = 3
+
+
+async def _retry_sleep(attempt: int) -> None:
+    """Exponential backoff: 1s, 2s, 4s."""
+    await asyncio.sleep(2 ** attempt)
+
 
 class LLMClient:
     async def complete(
@@ -121,11 +130,11 @@ class OfflineLLM(LLMClient):
         charge_llm_text(f"{system or ''}\n{prompt}")
         # The agent calls into the offline LLM with a small set of stable prompts.
         # We branch on substring markers in the prompt body.
-        if "Methods section:" in prompt:
+        if "Methods section:" in prompt or "<PAPER_CONTENT" in prompt:
             response = self._fake_decompose(prompt)
         elif "ORIGINAL_CLAIM" in prompt and "CANDIDATE_PASSAGE" in prompt:
             response = self._fake_locator(prompt)
-        elif "Source paper:" in prompt and "Claims (JSON):" in prompt:
+        elif "Source paper:" in prompt and "CLAIMS_JSON" in prompt:
             response = self._fake_assemble(prompt)
         else:
             response = json.dumps({"unhandled": True, "preview": prompt[:200]})
@@ -185,9 +194,14 @@ class OfflineLLM(LLMClient):
         return json.dumps({"claims": claims})
 
     def _fake_locator(self, prompt: str) -> str:
-        # Pull CANDIDATE_PASSAGE block
-        idx = prompt.find("CANDIDATE_PASSAGE")
-        passage = prompt[idx:].split("\n", 1)[1] if idx >= 0 else ""
+        # Pull <CANDIDATE_PASSAGE ...> block
+        idx = prompt.find("<CANDIDATE_PASSAGE")
+        if idx >= 0:
+            start = prompt.find(">", idx) + 1
+            end = prompt.find("</CANDIDATE_PASSAGE>")
+            passage = prompt[start:end].strip() if end > start else ""
+        else:
+            passage = ""
         specificity, cited = _classify_specificity(passage)
         return json.dumps(
             {
@@ -271,14 +285,26 @@ class GeminiLLM(LLMClient):
         if system:
             cfg["system_instruction"] = system
 
-        resp = await self.client.aio.models.generate_content(
-            model=model_name,
-            contents=prompt,
-            config=cfg,
-        )
-        text = resp.text or ""
-        charge_llm_text(text)
-        return text
+        last_err: Exception | None = None
+        for attempt in range(_MAX_RETRIES):
+            try:
+                resp = await self.client.aio.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=cfg,
+                )
+                text = resp.text or ""
+                charge_llm_text(text)
+                return text
+            except Exception as e:
+                status = getattr(getattr(e, "status_code", None), "value", None) or getattr(e, "status_code", 0)
+                if attempt < _MAX_RETRIES - 1 and (status in _RETRYABLE_STATUS or "503" in str(e) or "429" in str(e)):
+                    log.warning("llm.gemini_retry", attempt=attempt + 1, error=str(e))
+                    await _retry_sleep(attempt)
+                    last_err = e
+                else:
+                    raise
+        raise RuntimeError(f"GeminiLLM failed after {_MAX_RETRIES} attempts") from last_err
 
 
 class VertexADCGeminiLLM(LLMClient):
@@ -358,36 +384,48 @@ class VertexADCGeminiLLM(LLMClient):
         if system:
             body["systemInstruction"] = {"parts": [{"text": system}]}
 
-        token = await self._token()
-        timeout = httpx.Timeout(
-            self.request_timeout_seconds,
-            connect=30.0,
-            write=30.0,
-            pool=30.0,
-        )
-        try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
-                resp = await client.post(
-                    url,
-                    headers={
-                        "Authorization": f"Bearer {token}",
-                        "Content-Type": "application/json",
-                        "x-goog-user-project": self.quota_project_id,
-                    },
-                    json=body,
+        last_err: Exception | None = None
+        for attempt in range(_MAX_RETRIES):
+            try:
+                token = await self._token()
+                timeout = httpx.Timeout(
+                    self.request_timeout_seconds,
+                    connect=30.0,
+                    write=30.0,
+                    pool=30.0,
                 )
-        except httpx.TimeoutException as e:
-            raise RuntimeError(
-                f"Vertex AI request to {model_name} timed out after "
-                f"{self.request_timeout_seconds:g} seconds"
-            ) from e
-        resp.raise_for_status()
-        payload = resp.json()
-
-        parts = payload.get("candidates", [{}])[0].get("content", {}).get("parts", [])
-        text = "\n".join(part.get("text", "") for part in parts if part.get("text"))
-        charge_llm_text(text)
-        return text
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    resp = await client.post(
+                        url,
+                        headers={
+                            "Authorization": f"Bearer {token}",
+                            "Content-Type": "application/json",
+                            "x-goog-user-project": self.quota_project_id,
+                        },
+                        json=body,
+                    )
+                if resp.status_code in _RETRYABLE_STATUS and attempt < _MAX_RETRIES - 1:
+                    log.warning("llm.vertex_retry", attempt=attempt + 1, status=resp.status_code)
+                    await _retry_sleep(attempt)
+                    last_err = RuntimeError(f"Vertex HTTP {resp.status_code}")
+                    continue
+                resp.raise_for_status()
+                payload = resp.json()
+                parts = payload.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+                text = "\n".join(part.get("text", "") for part in parts if part.get("text"))
+                charge_llm_text(text)
+                return text
+            except httpx.TimeoutException as e:
+                if attempt < _MAX_RETRIES - 1:
+                    log.warning("llm.vertex_timeout_retry", attempt=attempt + 1)
+                    await _retry_sleep(attempt)
+                    last_err = e
+                else:
+                    raise RuntimeError(
+                        f"Vertex AI request to {model_name} timed out after "
+                        f"{self.request_timeout_seconds:g} seconds"
+                    ) from e
+        raise RuntimeError(f"VertexADCGeminiLLM failed after {_MAX_RETRIES} attempts") from last_err
 
 
 class AnthropicLLM(LLMClient):
@@ -406,18 +444,31 @@ class AnthropicLLM(LLMClient):
         temperature: float = 0.2,
     ) -> str:
         charge_llm_text(f"{system or ''}\n{prompt}")
+        settings = get_settings()
         model_id = "claude-opus-4-5" if model == "pro" else "claude-haiku-4-5-20251001"
-        resp = await self.client.messages.create(
-            model=model_id,
-            max_tokens=4096,
-            system=system or "",
-            temperature=temperature,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        parts = [b.text for b in resp.content if hasattr(b, "text")]
-        text = "\n".join(parts)
-        charge_llm_text(text)
-        return text
+        last_err: Exception | None = None
+        for attempt in range(_MAX_RETRIES):
+            try:
+                resp = await self.client.messages.create(
+                    model=model_id,
+                    max_tokens=settings.llm_max_tokens,
+                    system=system or "",
+                    temperature=temperature,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                parts = [b.text for b in resp.content if hasattr(b, "text")]
+                text = "\n".join(parts)
+                charge_llm_text(text)
+                return text
+            except Exception as e:
+                status = getattr(e, "status_code", 0)
+                if attempt < _MAX_RETRIES - 1 and (status in _RETRYABLE_STATUS or "529" in str(e) or "overloaded" in str(e).lower()):
+                    log.warning("llm.anthropic_retry", attempt=attempt + 1, error=str(e))
+                    await _retry_sleep(attempt)
+                    last_err = e
+                else:
+                    raise
+        raise RuntimeError(f"AnthropicLLM failed after {_MAX_RETRIES} attempts") from last_err
 
 
 # ---------- Factory ----------

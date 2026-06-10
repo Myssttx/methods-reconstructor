@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     llm_provider: Literal["auto", "gemini", "anthropic", "offline"] = "auto"
     llm_request_timeout_seconds: float = 180.0
+    llm_max_tokens: int = 8192  # max output tokens per LLM call (used by Anthropic)
 
     # Elastic
     elastic_cloud_id: str = ""

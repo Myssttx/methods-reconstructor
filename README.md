@@ -92,8 +92,9 @@ eval/       Held-out eval set + harness
 This is a research prototype, not a validated reproducibility assessor. It validates
 structured LLM output, rejects fabricated source spans, distinguishes evidence-backed
 resolution from corpus inference, enforces job limits, and persists completed results.
-The local worker registry is still process-local; production deployment needs a durable
-queue for jobs that must survive worker restarts.
+It uses a durable Redis queue for background job processing, ensuring tasks survive worker
+restarts, and includes production-ready security like API key authentication, SSRF hardening,
+and strict Docker network isolation.
 
 ## Future Improvements: Overcoming Paywalls
 

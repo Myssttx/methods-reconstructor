@@ -57,9 +57,10 @@ async def test_decompose_classifies_standard(llm):
 @pytest.mark.asyncio
 async def test_locator_detects_shortcut(llm):
     prompt = (
-        "ORIGINAL_CLAIM:\nCells were dissociated.\n\n"
-        "CANDIDATE_PASSAGE (from cited paper X):\n"
-        "Tissue was dissociated as previously described in Okamoto et al. 2016 [ref_1]."
+        "<ORIGINAL_CLAIM>\nCells were dissociated.\n</ORIGINAL_CLAIM>\n\n"
+        '<CANDIDATE_PASSAGE source="X">\n'
+        "Tissue was dissociated as previously described in Okamoto et al. 2016 [ref_1].\n"
+        "</CANDIDATE_PASSAGE>"
     )
     out = await llm.complete(prompt=prompt)
     data = json.loads(out)
