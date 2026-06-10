@@ -18,8 +18,10 @@ def get_redis() -> redis.Redis:
     global _redis_pool
     if _redis_pool is None:
         settings = get_settings()
+        password = settings.redis_password or None
+        auth = f":{password}@" if password else ""
         _redis_pool = redis.ConnectionPool.from_url(
-            f"redis://{settings.redis_host}:{settings.redis_port}",
+            f"redis://{auth}{settings.redis_host}:{settings.redis_port}",
             decode_responses=True,
         )
     return redis.Redis(connection_pool=_redis_pool)

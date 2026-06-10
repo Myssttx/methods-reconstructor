@@ -1,15 +1,17 @@
 import json
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
 from app.agent.queue import enqueue, subscribe
+from app.api.deps import require_api_key
+from app.config import get_settings
 from app.logging import get_logger
 from app.storage.firestore_client import get_store
 
 log = get_logger(__name__)
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_api_key)])
 
 
 class ReconstructionRequest(BaseModel):
@@ -18,6 +20,15 @@ class ReconstructionRequest(BaseModel):
 
 @router.post("")
 async def create_reconstruction(req: ReconstructionRequest):
+    settings = get_settings()
+    from app.agent.queue import get_redis  # avoid circular at module level
+    r = get_redis()
+    queue_depth = await r.llen("job_queue")
+    if queue_depth >= settings.app_max_queue_depth:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Queue full ({queue_depth}/{settings.app_max_queue_depth}). Try again later.",
+        )
     job_id = await enqueue(req.identifier.strip())
     return {
         "job_id": job_id,

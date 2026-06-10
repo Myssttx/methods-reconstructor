@@ -2,14 +2,15 @@ import csv
 import io
 import json
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 
+from app.api.deps import require_api_key
 from app.logging import get_logger
 from app.storage.firestore_client import get_store
 
 log = get_logger(__name__)
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_api_key)])
 
 
 @router.get("/{job_id}/export.{fmt}")

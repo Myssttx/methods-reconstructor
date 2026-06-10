@@ -91,5 +91,5 @@ async def test_pdf_fetch_rejects_private_network_targets(monkeypatch):
             (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 80))
         ],
     )
-    with pytest.raises(ValueError, match="non-public"):
+    with pytest.raises(ValueError, match="blocked|non-public"):
         await pdf_client._validate_public_url("http://example.test/paper.pdf")

@@ -18,6 +18,8 @@ MAX_PDF_BYTES = 50 * 1024 * 1024
 MAX_HTML_BYTES = 2 * 1024 * 1024
 MAX_REDIRECTS = 5
 USER_AGENT = "MethodsReconstructor/0.1 (research prototype)"
+# M-15: Keywords that indicate a main-article PDF link (vs. supplemental/ad).
+_PDF_PREFERRED_KEYWORDS = {"pdf", "full", "article", "download", "fulltext"}
 
 
 def is_pdf_identifier(identifier: str) -> bool:
@@ -93,6 +95,21 @@ async def _safe_get(
     raise ValueError(f"Too many redirects while fetching {url}")
 
 
+# C-6: CIDR ranges that must NEVER be contacted, regardless of is_global().
+# Covers AWS/GCP/Azure metadata endpoints, link-local, ULA IPv6, carrier-grade NAT.
+_BLOCKED_NETWORKS = [
+    ipaddress.ip_network("169.254.0.0/16"),   # link-local / AWS IMDSv1
+    ipaddress.ip_network("100.64.0.0/10"),    # carrier-grade NAT
+    ipaddress.ip_network("fd00::/8"),          # IPv6 ULA
+    ipaddress.ip_network("fc00::/7"),          # IPv6 ULA broader
+    ipaddress.ip_network("::1/128"),           # IPv6 loopback
+    ipaddress.ip_network("127.0.0.0/8"),       # IPv4 loopback
+    ipaddress.ip_network("10.0.0.0/8"),        # private
+    ipaddress.ip_network("172.16.0.0/12"),     # private
+    ipaddress.ip_network("192.168.0.0/16"),    # private
+]
+
+
 async def _validate_public_url(url: str) -> None:
     parsed = urlparse(url)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
@@ -115,21 +132,38 @@ async def _validate_public_url(url: str) -> None:
         raise ValueError("URL host did not resolve")
     for address in addresses:
         ip = ipaddress.ip_address(address)
+        # C-6: Check explicit block-list first (catches metadata IPs is_global misses).
+        for net in _BLOCKED_NETWORKS:
+            if ip in net:
+                raise ValueError(f"URL resolves to a blocked address range: {address}")
         if not ip.is_global:
             raise ValueError(f"URL resolves to a non-public address: {address}")
 
 
 def _find_pdf_url(html: str, base_url: str) -> str | None:
     soup = BeautifulSoup(html, "html.parser")
+    # Prefer structured meta tags — most reliable.
     for name in ("citation_pdf_url", "eprints.document_url"):
         meta = soup.find("meta", attrs={"name": name})
         if meta and meta.get("content"):
             return urljoin(base_url, str(meta["content"]))
+    # M-15: Score links — prefer those with article/pdf/full in text or class.
+    best_url: str | None = None
+    best_score = -1
     for link in soup.find_all("a", href=True):
         href = str(link["href"])
-        if urlparse(href).path.lower().endswith(".pdf"):
-            return urljoin(base_url, href)
-    return None
+        if not urlparse(href).path.lower().endswith(".pdf"):
+            continue
+        score = 0
+        text = (link.get_text(" ", strip=True) + " " + " ".join(link.get("class") or [])).lower()
+        if any(kw in text for kw in _PDF_PREFERRED_KEYWORDS):
+            score += 2
+        if "supplement" in text or "appendix" in text or "suppl" in text:
+            score -= 3  # deprioritize supplemental files
+        if score > best_score:
+            best_score = score
+            best_url = urljoin(base_url, href)
+    return best_url
 
 
 def _valid_pdf(data: bytes) -> bool:

@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     app_max_concurrent_claims: int = 4
     app_max_methods_chunk_chars: int = 40_000
     app_max_assembly_chars: int = 100_000
+    app_max_queue_depth: int = 50  # C-5: max pending jobs in Redis queue
+
+    # Auth (C-4: set API_KEY env var to enable X-API-Key protection)
+    api_key: str = ""  # empty = open access (dev mode)
 
     # GCP / Vertex (optional)
     gcp_project_id: str = ""
@@ -55,6 +59,7 @@ class Settings(BaseSettings):
     # Redis
     redis_host: str = "localhost"
     redis_port: int = 6379
+    redis_password: str = ""  # L-9: set REDIS_PASSWORD for production
 
     # External APIs
     openalex_email: str = ""

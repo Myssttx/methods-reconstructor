@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from app.api.deps import require_api_key
 from app.ingest.fixtures import list_fixture_ids
 from app.ingest.pipeline import ingest_identifier
 from app.logging import get_logger
@@ -8,7 +9,7 @@ from app.search.papers_dao import get_paper
 
 log = get_logger(__name__)
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_api_key)])
 
 
 class IngestRequest(BaseModel):
