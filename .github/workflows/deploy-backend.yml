@@ -19,7 +19,39 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  configuration:
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: "${{ steps.check.outputs.enabled }}"
+    env:
+      PROJECT_ID: "${{ vars.GCP_PROJECT_ID }}"
+      REGION: "${{ vars.GCP_REGION }}"
+      SERVICE: "${{ vars.CLOUD_RUN_SERVICE }}"
+      REPOSITORY: "${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}"
+      RUNTIME_SERVICE_ACCOUNT: "${{ vars.CLOUD_RUN_RUNTIME_SERVICE_ACCOUNT }}"
+      FRONTEND_ORIGIN: "${{ vars.FRONTEND_ORIGIN }}"
+      ELASTIC_CLOUD_ID_SECRET: "${{ vars.ELASTIC_CLOUD_ID_SECRET }}"
+      ELASTIC_API_KEY_SECRET: "${{ vars.ELASTIC_API_KEY_SECRET }}"
+      GCP_WORKLOAD_IDENTITY_PROVIDER: "${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}"
+      GCP_DEPLOY_SERVICE_ACCOUNT: "${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}"
+    steps:
+      - id: check
+        name: Check deployment configuration
+        run: |
+          missing=()
+          for name in PROJECT_ID REGION SERVICE REPOSITORY RUNTIME_SERVICE_ACCOUNT FRONTEND_ORIGIN ELASTIC_CLOUD_ID_SECRET ELASTIC_API_KEY_SECRET GCP_WORKLOAD_IDENTITY_PROVIDER GCP_DEPLOY_SERVICE_ACCOUNT; do
+            test -n "${!name}" || missing+=("$name")
+          done
+          if ((${#missing[@]})); then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Cloud Run deployment skipped; missing repository configuration: ${missing[*]}"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
   deploy:
+    needs: configuration
+    if: needs.configuration.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     env:
       PROJECT_ID: "${{ vars.GCP_PROJECT_ID }}"
@@ -32,14 +64,6 @@ jobs:
       ELASTIC_API_KEY_SECRET: "${{ vars.ELASTIC_API_KEY_SECRET }}"
     steps:
       - uses: actions/checkout@v4
-      - name: Validate deployment variables
-        run: |
-          for name in PROJECT_ID REGION SERVICE REPOSITORY RUNTIME_SERVICE_ACCOUNT FRONTEND_ORIGIN ELASTIC_CLOUD_ID_SECRET ELASTIC_API_KEY_SECRET; do
-            test -n "${!name}" || {
-              echo "Missing repository variable: $name"
-              exit 1
-            }
-          done
       - id: auth
         uses: google-github-actions/auth@v2
         with:
