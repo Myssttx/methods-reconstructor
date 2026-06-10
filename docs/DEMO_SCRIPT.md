@@ -17,7 +17,8 @@ Show the live `paper_a` fixture in the UI with shortcut citations highlighted. C
 - Switch to the Gap report tab — show the one item that couldn't resolve and its suggested next step
 
 ## 2:15 — Architecture flash (15s)
-Quick diagram showing the agent loop calling Elastic hybrid search at the methods_locator step, with Gemini / Claude / offline-mock as interchangeable reasoning backends.
+Show the Google ADK/FastAPI agent calling Elastic hybrid search during citation
+resolution, with Gemini on Vertex AI handling bounded reasoning tasks.
 
 ## 2:30 — Impact close (30s)
 "Researchers spend weeks chasing methodological citation chains. Methods Reconstructor does it in minutes. We're not replacing the scientist — we're killing the bottleneck between them and the experiment."

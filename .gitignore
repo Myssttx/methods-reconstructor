@@ -16,6 +16,10 @@ out/
 
 # Env / secrets
 .env
+.env.*
+!.env.example
+aayush_env.txt
+*.env
 .env.local
 .env.*.local
 service-account-key.json
