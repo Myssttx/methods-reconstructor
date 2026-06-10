@@ -39,7 +39,10 @@ class LocalFileStore(JobStore):
         self.root = Path(root)
         (self.root / "jobs").mkdir(parents=True, exist_ok=True)
         (self.root / "reconstructions").mkdir(parents=True, exist_ok=True)
-        self._lock = asyncio.Lock()
+        # Per-entity locks so job writes don't block reconstruction writes.
+        self._job_locks: dict[str, asyncio.Lock] = {}
+        self._rec_locks: dict[str, asyncio.Lock] = {}
+        self._lock_guard = asyncio.Lock()
 
     def _job_path(self, job_id: str) -> Path:
         return self.root / "jobs" / f"{job_id}.json"
@@ -47,8 +50,21 @@ class LocalFileStore(JobStore):
     def _reconstruction_path(self, protocol_id: str) -> Path:
         return self.root / "reconstructions" / f"{protocol_id}.json"
 
+    async def _get_job_lock(self, job_id: str) -> asyncio.Lock:
+        async with self._lock_guard:
+            if job_id not in self._job_locks:
+                self._job_locks[job_id] = asyncio.Lock()
+            return self._job_locks[job_id]
+
+    async def _get_rec_lock(self, protocol_id: str) -> asyncio.Lock:
+        async with self._lock_guard:
+            if protocol_id not in self._rec_locks:
+                self._rec_locks[protocol_id] = asyncio.Lock()
+            return self._rec_locks[protocol_id]
+
     async def put_job(self, job: dict[str, Any]) -> None:
-        async with self._lock:
+        lock = await self._get_job_lock(job["job_id"])
+        async with lock:
             path = self._job_path(job["job_id"])
             await asyncio.to_thread(_atomic_json_write, path, job)
 
@@ -59,7 +75,8 @@ class LocalFileStore(JobStore):
         return await asyncio.to_thread(_json_read, path)
 
     async def put_reconstruction(self, protocol: dict[str, Any]) -> None:
-        async with self._lock:
+        lock = await self._get_rec_lock(protocol["protocol_id"])
+        async with lock:
             path = self._reconstruction_path(protocol["protocol_id"])
             await asyncio.to_thread(_atomic_json_write, path, protocol)
 

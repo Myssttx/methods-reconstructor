@@ -38,6 +38,7 @@ ABBREVIATION_END = re.compile(
     re.IGNORECASE,
 )
 _ingest_locks: dict[str, asyncio.Lock] = {}
+_ingest_lock_guard: asyncio.Lock = asyncio.Lock()
 
 
 def split_sentences(text: str) -> list[str]:
@@ -46,9 +47,8 @@ def split_sentences(text: str) -> list[str]:
         line = line.strip()
         if not line:
             continue
-        # GROBID emits section headings as standalone lines.
-        if len(line) < 120 and line[-1:] not in ".!?":
-            continue
+        # Previously dropped lines < 120 chars not ending in .!? — this silently
+        # discarded headings, equations, and bullet points. Now we keep all lines.
         for fragment in SENTENCE_SPLIT.split(line):
             fragment = fragment.strip()
             if not fragment:
@@ -108,16 +108,25 @@ async def _ingest_canonical(
     paper_id: str,
     fetcher,
 ) -> Paper | None:
-    lock = _ingest_locks.setdefault(paper_id, asyncio.Lock())
+    # Use a guard lock to safely create per-paper locks without racing.
+    async with _ingest_lock_guard:
+        if paper_id not in _ingest_locks:
+            _ingest_locks[paper_id] = asyncio.Lock()
+        lock = _ingest_locks[paper_id]
     async with lock:
-        cached = await get_paper_model(paper_id)
-        if cached and cached.methods_text():
-            log.info("ingest.elastic_cache_hit", paper_id=paper_id)
-            return cached
-        paper = await fetcher()
-        if paper is None:
-            return cached
-        return await _index_with_sentences(paper)
+        try:
+            cached = await get_paper_model(paper_id)
+            if cached and cached.methods_text():
+                log.info("ingest.elastic_cache_hit", paper_id=paper_id)
+                return cached
+            paper = await fetcher()
+            if paper is None:
+                return cached
+            return await _index_with_sentences(paper)
+        finally:
+            # Clean up lock entry to prevent unbounded memory growth.
+            async with _ingest_lock_guard:
+                _ingest_locks.pop(paper_id, None)
 
 
 async def _fetch_arxiv(arxiv_id: str) -> Paper | None:

@@ -1,6 +1,7 @@
 """Lightweight cache. Uses Redis if reachable, falls back to in-memory dict."""
 
 import json
+import time
 from typing import Any
 
 import redis.asyncio as aioredis
@@ -21,14 +22,20 @@ class _Cache:
 
 class InMemoryCache(_Cache):
     def __init__(self) -> None:
-        self._d: dict[str, str] = {}
+        self._d: dict[str, tuple[str, float]] = {}  # key -> (json_value, expires_at)
 
     async def get(self, key: str) -> Any:
-        v = self._d.get(key)
-        return json.loads(v) if v else None
+        entry = self._d.get(key)
+        if entry is None:
+            return None
+        value, expires_at = entry
+        if time.monotonic() > expires_at:
+            del self._d[key]
+            return None
+        return json.loads(value)
 
     async def set(self, key: str, value: Any, ttl_seconds: int = 3600) -> None:
-        self._d[key] = json.dumps(value)
+        self._d[key] = (json.dumps(value), time.monotonic() + ttl_seconds)
 
 
 class RedisCache(_Cache):

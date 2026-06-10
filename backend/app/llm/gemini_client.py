@@ -10,6 +10,7 @@ Every call returns plain text. Callers that expect JSON parse it themselves
 and handle the offline shape (which is already structured JSON).
 """
 
+import asyncio
 import json
 import re
 import time
@@ -306,27 +307,31 @@ class VertexADCGeminiLLM(LLMClient):
         if self.credentials.get("type") != "authorized_user":
             raise ValueError("Only user ADC credentials are supported by this lightweight client")
         self.quota_project_id = self.credentials.get("quota_project_id") or project_id
+        self._token_lock = asyncio.Lock()
 
     async def _token(self) -> str:
         if self._access_token and time.time() < self._expires_at - 60:
             return self._access_token
-
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(
-                "https://oauth2.googleapis.com/token",
-                data={
-                    "client_id": self.credentials["client_id"],
-                    "client_secret": self.credentials["client_secret"],
-                    "refresh_token": self.credentials["refresh_token"],
-                    "grant_type": "refresh_token",
-                },
-            )
-            resp.raise_for_status()
-            payload = resp.json()
-
-        self._access_token = payload["access_token"]
-        self._expires_at = time.time() + int(payload.get("expires_in", 3600))
-        return self._access_token
+        # H-8 fix: serialize refresh so concurrent callers don't all hit OAuth.
+        async with self._token_lock:
+            # Re-check after acquiring lock in case another coroutine refreshed.
+            if self._access_token and time.time() < self._expires_at - 60:
+                return self._access_token
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(
+                    "https://oauth2.googleapis.com/token",
+                    data={
+                        "client_id": self.credentials["client_id"],
+                        "client_secret": self.credentials["client_secret"],
+                        "refresh_token": self.credentials["refresh_token"],
+                        "grant_type": "refresh_token",
+                    },
+                )
+                resp.raise_for_status()
+                payload = resp.json()
+            self._access_token = payload["access_token"]
+            self._expires_at = time.time() + int(payload.get("expires_in", 3600))
+            return self._access_token
 
     async def complete(
         self,

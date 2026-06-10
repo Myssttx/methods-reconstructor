@@ -24,7 +24,9 @@ class LocalBlobStore(BlobStore):
         self._lock = asyncio.Lock()
 
     async def put(self, key: str, data: bytes, content_type: str = "application/octet-stream") -> str:
-        path = self.root / key
+        path = (self.root / key).resolve()
+        if not path.is_relative_to(self.root.resolve()):
+            raise ValueError(f"Blob key '{key}' resolves outside storage root")
         path.parent.mkdir(parents=True, exist_ok=True)
         async with self._lock:
             path.write_bytes(data)

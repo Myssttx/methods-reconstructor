@@ -6,7 +6,6 @@ messages for the frontend. Job + protocol state is persisted via the JobStore
 """
 
 import asyncio
-import uuid
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 
@@ -28,7 +27,6 @@ from app.models import (
     Specificity,
 )
 from app.search.claims_dao import bulk_index_claims, delete_claims_for_paper
-from app.search.indexes import ensure_indexes
 from app.storage.firestore_client import get_store
 
 log = get_logger(__name__)
@@ -83,7 +81,6 @@ class AgentRunner:
             await self.store.put_job(job.model_dump(mode="json"))
             settings = get_settings()
             with token_budget(settings.app_per_paper_token_budget):
-                await ensure_indexes()
                 await self._run_inner(job)
         except Exception as e:
             error_message = _error_message(e)
@@ -249,33 +246,3 @@ def _count_by_specificity(claims: list[Claim]) -> dict[str, int]:
     for c in claims:
         out[c.specificity.value] = out.get(c.specificity.value, 0) + 1
     return out
-
-
-# Job registry — keep AgentRunner instances alive across API calls so the SSE
-# stream endpoint can attach to an in-flight job.
-_runners: dict[str, AgentRunner] = {}
-_runner_tasks: dict[str, asyncio.Task[None]] = {}
-
-
-def start_job(identifier: str) -> AgentRunner:
-    settings = get_settings()
-    if len(_runner_tasks) >= settings.app_max_concurrent_jobs:
-        raise JobCapacityError(
-            f"At most {settings.app_max_concurrent_jobs} reconstructions may run concurrently"
-        )
-    job_id = str(uuid.uuid4())
-    runner = AgentRunner(job_id=job_id, identifier=identifier)
-    _runners[job_id] = runner
-    task = asyncio.create_task(runner.run())
-    _runner_tasks[job_id] = task
-
-    def cleanup(_task: asyncio.Task[None]) -> None:
-        _runner_tasks.pop(job_id, None)
-        _runners.pop(job_id, None)
-
-    task.add_done_callback(cleanup)
-    return runner
-
-
-def get_runner(job_id: str) -> AgentRunner | None:
-    return _runners.get(job_id)

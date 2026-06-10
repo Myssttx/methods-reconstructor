@@ -34,7 +34,7 @@ async def resolve_claim(
 ) -> ResolutionResult:
     settings = get_settings()
 
-    if depth > settings.app_max_recursion_depth:
+    if depth >= settings.app_max_recursion_depth:
         return ResolutionResult(status="terminal_gap", terminal_reason=GapReason.DEPTH_EXCEEDED)
 
     if claim.specificity == Specificity.SHORTCUT_CITATION:
@@ -86,7 +86,7 @@ async def _resolve_shortcut(
     chain: list[dict],
 ) -> ResolutionResult:
     settings = get_settings()
-    if depth > settings.app_max_recursion_depth:
+    if depth >= settings.app_max_recursion_depth:
         return ResolutionResult(
             status="terminal_gap",
             terminal_reason=GapReason.DEPTH_EXCEEDED,
@@ -226,12 +226,12 @@ async def _resolve_standard(claim: Claim) -> ResolutionResult:
 
 
 def _normalize_ref_id(ref_id: str) -> str:
-    value = ref_id.strip().lower().strip("[]#")
-    if value.startswith("ref_"):
-        return value[4:]
-    if value.startswith("b") and value[1:].isdigit():
-        return value[1:]
-    return value
+    """Normalize a ref id for lookup, preserving format to avoid collisions.
+
+    Strips punctuation only — does NOT strip format prefixes like 'ref_' or 'b'
+    so that ref_12 and b12 remain distinct keys.
+    """
+    return ref_id.strip().lower().strip("[]#")
 
 
 def _reference_lookup(paper: Paper) -> dict[str, Reference]:

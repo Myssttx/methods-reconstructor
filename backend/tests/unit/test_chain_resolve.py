@@ -95,10 +95,17 @@ def test_reference_ids_are_normalized_across_grobid_and_llm_formats():
         paper_id="paper",
         source=PaperSource.UPLOAD,
         title="Paper",
-        references=[Reference(ref_id="b24", raw_citation="Prior paper")],
+        references=[
+            Reference(ref_id="b24", raw_citation="Prior paper B"),
+            Reference(ref_id="ref_24", raw_citation="Prior paper Ref"),
+        ],
     )
     lookup = chain_resolve._reference_lookup(paper)
-    assert lookup[chain_resolve._normalize_ref_id("ref_24")].ref_id == "b24"
+    # M-5 fix: b24 and ref_24 must stay as distinct keys to avoid silent collisions.
+    assert lookup[chain_resolve._normalize_ref_id("b24")].ref_id == "b24"
+    assert lookup[chain_resolve._normalize_ref_id("ref_24")].ref_id == "ref_24"
+    assert chain_resolve._normalize_ref_id("[b24]") == "b24"
+    assert chain_resolve._normalize_ref_id("[ref_24]") == "ref_24"
 
 
 def test_corpus_inference_requires_method_specific_overlap():

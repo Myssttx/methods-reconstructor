@@ -164,10 +164,10 @@ def _section_for_claim(claim: Claim) -> str:
         "sample_prep": "sample_prep",
         "procedure": "procedure",
         "analysis": "analysis",
-        "parameter": "software",
+        "parameter": "procedure",  # parameters describe procedure steps, not software
         "software": "software",
         "dataset": "datasets",
-    }[claim.type.value]
+    }.get(claim.type.value, "procedure")  # safe fallback for future ClaimType values
 
 
 def _suggest_action(reason: GapReason) -> str:

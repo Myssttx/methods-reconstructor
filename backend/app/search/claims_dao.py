@@ -38,7 +38,14 @@ async def bulk_index_claims(claims: list[Claim], embeddings: list[list[float]] |
         ops.append(_claim_doc(claim, emb))
     if not ops:
         return
-    await es.bulk(operations=ops, refresh="wait_for")
+    resp = await es.bulk(operations=ops, refresh="wait_for")
+    if resp.get("errors"):
+        failed = [
+            item for item in resp.get("items", [])
+            if "error" in item.get("index", {})
+        ]
+        log.error("claims.bulk_index_errors", n_failed=len(failed), sample=failed[:3])
+        raise RuntimeError(f"Elasticsearch bulk index had {len(failed)} failures")
     log.info("claims.bulk_indexed", n=len(claims))
 
 
