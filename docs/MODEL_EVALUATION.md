@@ -35,3 +35,23 @@ This file is filtered pseudo-label data, not gold data. It is useful for prompt
 regression tests, retrieval reranking experiments, and later supervised tuning
 after a human-reviewed validation split exists. Training directly on all
 model-generated labels would be methodologically weak and can reinforce errors.
+
+## Cancer stress suite
+
+The repository includes a fixed set of complex public cancer papers covering
+single-cell sequencing, spatial transcriptomics, imaging mass cytometry, and
+multiplexed ion beam imaging:
+
+```bash
+make cancer-stress
+```
+
+Each result records ingestion, decomposition, indexing, resolution, assembly,
+and total time, plus claim count, gap rate, evidence coverage, and the exact
+failure message. The default performance target is two minutes per paper.
+
+The default hybrid extractor uses Gemini below 40 source sentences and switches
+directly to deterministic, sentence-linked extraction at 40 sentences or more.
+Gemini chunks have a 15-second ceiling and failed chunks fall back independently
+without discarding successful chunks. Claims and protocol metadata record which
+extraction mode was used.

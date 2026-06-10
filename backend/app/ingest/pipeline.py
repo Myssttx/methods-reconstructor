@@ -34,7 +34,7 @@ log = get_logger(__name__)
 
 SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
 ABBREVIATION_END = re.compile(
-    r"\b(?:et al|e\.g|i\.e|fig|eq|dr|mr|mrs|ms|prof|vs|no)\.$",
+    r"\b(?:et al|e\.g|i\.e|fig|eq|dr|mr|mrs|ms|prof|vs|no|st|inc|co|corp|ltd)\.$",
     re.IGNORECASE,
 )
 _ingest_locks: dict[str, asyncio.Lock] = {}
@@ -135,6 +135,14 @@ async def _fetch_arxiv(arxiv_id: str) -> Paper | None:
 
 
 async def _fetch_doi(doi: str) -> Paper | None:
+    pmc_id = await pmc_client.find_pmc_by_doi(doi)
+    if pmc_id:
+        pmc_paper = await pmc_client.fetch_pmc(pmc_id)
+        if pmc_paper and pmc_paper.methods_text():
+            pmc_paper.paper_id = f"doi:{doi}"
+            log.info("ingest.pmc_doi_hit", doi=doi, pmc_id=pmc_id)
+            return pmc_paper
+
     meta = await openalex_client.fetch_openalex_by_doi(doi)
     if meta:
         paper = _paper_from_openalex(doi, meta)

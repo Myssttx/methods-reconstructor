@@ -1,4 +1,4 @@
-.PHONY: help dev up down logs build backend-shell frontend-shell test test-unit test-integration test-frontend lint eval variability training-export clean elastic-init seed native-backend native-frontend native-elastic native-setup
+.PHONY: help dev up down logs build backend-shell frontend-shell test test-unit test-integration test-frontend lint eval variability cancer-stress training-export clean elastic-init seed native-backend native-frontend native-elastic native-setup
 
 # Use modern `docker compose` v2 (built into Docker Desktop) by default.
 # Override with `make DC=docker-compose ...` if you only have the deprecated v1 binary.
@@ -30,6 +30,7 @@ help:
 	@echo "  make lint              — ruff + mypy + eslint"
 	@echo "  make eval              — run eval harness"
 	@echo "  make variability ID=…  — repeat a full run and report consistency"
+	@echo "  make cancer-stress     — run complex public cancer papers"
 	@echo "  make training-export   — export source-backed JSONL examples"
 	@echo "  make clean             — remove local state + caches"
 
@@ -115,6 +116,10 @@ variability:
 	test -n "$(ID)" || { echo "Usage: make variability ID=fixture:paper_a"; exit 1; }
 	ELASTIC_URL=http://localhost:9200 \
 		backend/.venv/bin/python eval/run_variability.py "$(ID)" --runs "$(or $(RUNS),3)"
+
+cancer-stress:
+	ELASTIC_URL=http://localhost:9200 \
+		backend/.venv/bin/python eval/run_cancer_stress.py
 
 training-export:
 	backend/.venv/bin/python eval/export_training_jsonl.py

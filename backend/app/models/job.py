@@ -29,6 +29,7 @@ class Job(BaseModel):
     paper_id: str | None = None
     protocol_id: str | None = None
     error: str | None = None
+    timings_ms: dict[str, float] = Field(default_factory=dict)
     started_at: str
     updated_at: str
     completed_at: str | None = None

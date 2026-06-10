@@ -1,7 +1,19 @@
 import uuid
 
+import pytest
+
+from app.agent.tools import protocol_assemble
 from app.agent.tools.protocol_assemble import compute_scores
-from app.models import ChainStep, Claim, ClaimType, ResolutionStatus, Specificity
+from app.config import Settings
+from app.models import (
+    ChainStep,
+    Claim,
+    ClaimType,
+    Paper,
+    PaperSource,
+    ResolutionStatus,
+    Specificity,
+)
 
 
 def _c(type_: ClaimType, status: ResolutionStatus, spec=Specificity.SHORTCUT_CITATION, conf=1.0):
@@ -77,3 +89,35 @@ def test_corpus_inference_does_not_count_as_evidence():
     ]
     overall, _ = compute_scores(claims)
     assert overall == 50.0
+
+
+@pytest.mark.asyncio
+async def test_default_assembly_is_deterministic_and_does_not_call_llm(monkeypatch):
+    monkeypatch.setattr(
+        protocol_assemble,
+        "get_settings",
+        lambda: Settings(app_use_llm_assembly=False),
+    )
+
+    def unexpected_llm():
+        raise AssertionError("LLM assembly should be disabled by default")
+
+    monkeypatch.setattr(protocol_assemble, "get_llm", unexpected_llm)
+    claim = _c(
+        ClaimType.PROCEDURE,
+        ResolutionStatus.RESOLVED,
+        spec=Specificity.FULLY_DESCRIBED,
+    )
+
+    protocol = await protocol_assemble.assemble(
+        Paper(
+            paper_id="paper",
+            source=PaperSource.UPLOAD,
+            title="Paper",
+        ),
+        [claim],
+        job_id="job",
+    )
+
+    assert protocol.sections["procedure"] == [claim]
+    assert protocol.generation_metadata["assembly_mode"] == "deterministic"

@@ -39,6 +39,15 @@ export default function EvaluationPage() {
           not pretend the system is deterministic before the data supports it.
         </p>
       </div>
+      <div className="mt-4 rounded-[28px] bg-white p-7 ring-1 ring-black/[0.06] md:p-9">
+        <h2 className="text-2xl font-semibold">Cancer stress suite</h2>
+        <p className="mt-3 max-w-3xl leading-7 text-steel">
+          Five public, methodologically complex cancer papers exercise spatial
+          transcriptomics, single-cell sequencing, imaging mass cytometry, and
+          multiplexed ion beam imaging. Reports include stage timing, failures,
+          gap rate, and evidence coverage.
+        </p>
+      </div>
     </div>
   );
 }

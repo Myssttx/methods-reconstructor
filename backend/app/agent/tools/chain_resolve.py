@@ -11,11 +11,11 @@ the user *exactly* where the resolution came from (or where it broke).
 """
 
 import re
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 from app.agent.schemas import ResolutionResult
 from app.agent.tools.methods_locator import locate
-from app.agent.tools.paper_fetch import fetch_by_ref
+from app.agent.tools.paper_fetch import FetchResult, fetch_by_ref
 from app.config import get_settings
 from app.llm.embeddings import aembed_text
 from app.logging import get_logger
@@ -31,15 +31,22 @@ async def resolve_claim(
     *,
     on_event: Callable[[str, dict], None] | None = None,
     depth: int = 0,
+    fetcher: Callable[[Reference | str], Awaitable[FetchResult]] | None = None,
 ) -> ResolutionResult:
     settings = get_settings()
+    fetcher = fetcher or fetch_by_ref
 
     if depth >= settings.app_max_recursion_depth:
         return ResolutionResult(status="terminal_gap", terminal_reason=GapReason.DEPTH_EXCEEDED)
 
     if claim.specificity == Specificity.SHORTCUT_CITATION:
         return await _resolve_shortcut(
-            claim, source_paper, on_event=on_event, depth=depth, chain=[]
+            claim,
+            source_paper,
+            on_event=on_event,
+            depth=depth,
+            chain=[],
+            fetcher=fetcher,
         )
 
     if claim.specificity == Specificity.PARTIALLY_DESCRIBED:
@@ -50,6 +57,7 @@ async def resolve_claim(
                 on_event=on_event,
                 depth=depth,
                 chain=[],
+                fetcher=fetcher,
             )
             if cited_result.status == "resolved":
                 return cited_result
@@ -65,6 +73,7 @@ async def resolve_claim(
                 on_event=on_event,
                 depth=depth,
                 chain=[],
+                fetcher=fetcher,
             )
             if cited_result.status == "resolved":
                 return cited_result
@@ -84,6 +93,7 @@ async def _resolve_shortcut(
     on_event: Callable[[str, dict], None] | None,
     depth: int,
     chain: list[dict],
+    fetcher: Callable[[Reference | str], Awaitable[FetchResult]],
 ) -> ResolutionResult:
     settings = get_settings()
     if depth >= settings.app_max_recursion_depth:
@@ -115,7 +125,7 @@ async def _resolve_shortcut(
                 {"claim_id": claim.claim_id, "ref_id": ref_id, "depth": depth},
             )
 
-        fetched = await fetch_by_ref(ref)
+        fetched = await fetcher(ref)
         ref_paper = fetched.paper
         if ref_paper is None:
             failure_reason = fetched.failure_reason or GapReason.SOURCE_UNAVAILABLE
@@ -158,6 +168,7 @@ async def _resolve_shortcut(
                 on_event=on_event,
                 depth=depth + 1,
                 chain=[*chain, step],
+                fetcher=fetcher,
             )
 
         chain = [*chain, step]

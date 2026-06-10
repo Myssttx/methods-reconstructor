@@ -67,6 +67,6 @@ async def claims_for_paper(paper_id: str) -> list[dict[str, Any]]:
     result = await es.search(
         index=settings.elastic_claims_index,
         query={"term": {"paper_id": paper_id}},
-        size=500,
+        size=10_000,
     )
     return [hit["_source"] for hit in result["hits"]["hits"]]

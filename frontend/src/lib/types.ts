@@ -103,4 +103,5 @@ export interface ReconstructionJob {
     | "failed";
   protocol_id: string | null;
   error: string | null;
+  timings_ms: Record<string, number>;
 }

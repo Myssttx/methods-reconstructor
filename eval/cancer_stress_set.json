@@ -1,0 +1,61 @@
+{
+  "_schema": "v1",
+  "_note": "Methodologically complex cancer papers selected to stress full-text ingestion, multimodal methods extraction, citation resolution, and protocol assembly. Access expectations are explicit so an unavailable source is reported rather than mislabeled.",
+  "papers": [
+    {
+      "identifier": "10.1038/s41586-019-1876-x",
+      "title": "The single-cell pathology landscape of breast cancer",
+      "access_expectation": "open-access full text or repository PDF",
+      "complexity": [
+        "imaging mass cytometry",
+        "large antibody panel",
+        "image segmentation",
+        "single-cell phenotyping"
+      ]
+    },
+    {
+      "identifier": "10.1038/s41587-019-0392-8",
+      "title": "Integrating microarray-based spatial transcriptomics and single-cell RNA-seq reveals tissue architecture in pancreatic ductal adenocarcinomas",
+      "access_expectation": "negative acquisition case: metadata public, no PMC record or OpenAlex OA file",
+      "complexity": [
+        "spatial transcriptomics",
+        "single-cell RNA-seq",
+        "cross-platform integration",
+        "pancreatic tumor tissue processing"
+      ]
+    },
+    {
+      "identifier": "10.1158/2159-8290.CD-19-0094",
+      "title": "Cross-Species Single-Cell Analysis of Pancreatic Ductal Adenocarcinoma Reveals Antigen-Presenting Cancer-Associated Fibroblasts",
+      "access_expectation": "PMC6727976",
+      "complexity": [
+        "human and mouse tissue",
+        "single-cell RNA-seq",
+        "cell-state analysis",
+        "cross-species integration"
+      ]
+    },
+    {
+      "identifier": "10.1016/j.cell.2017.10.044",
+      "title": "Single-Cell Transcriptomic Analysis of Primary and Metastatic Tumor Ecosystems in Head and Neck Cancer",
+      "access_expectation": "PMC5878932",
+      "complexity": [
+        "primary and metastatic tumors",
+        "single-cell RNA-seq",
+        "tumor dissociation",
+        "copy-number and cell-state analysis"
+      ]
+    },
+    {
+      "identifier": "10.1016/j.cell.2018.08.039",
+      "title": "A Structured Tumor-Immune Microenvironment in Triple Negative Breast Cancer Revealed by Multiplexed Ion Beam Imaging",
+      "access_expectation": "PMC6132072",
+      "complexity": [
+        "multiplexed ion beam imaging",
+        "antibody conjugation",
+        "image registration",
+        "spatial cell analysis"
+      ]
+    }
+  ]
+}

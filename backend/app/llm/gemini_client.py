@@ -18,6 +18,7 @@ from typing import Any
 
 import httpx
 
+from app.agent.method_rules import classify_specificity, classify_type
 from app.config import get_settings
 from app.llm.budget import charge_llm_text
 from app.llm.google_auth import GoogleAccessTokenProvider
@@ -49,70 +50,6 @@ class LLMClient:
 
 
 # ---------- Offline (deterministic mock) ----------
-
-
-SHORTCUT_PATTERNS = [
-    r"as described (?:previously|in)",
-    r"as (?:previously )?described",
-    r"following the (?:protocol|method) of",
-    r"following [A-Z][a-z]+ (?:et al\.?)?",
-    r"see (?:supplementary|ref\.?|references?) for",
-    r"performed as in",
-    r"per the procedure of",
-    r"\(ref_\d+\)",
-]
-
-STANDARD_PATTERNS = [
-    r"standard (?:conditions|protocol|methods?)",
-    r"as is conventional",
-    r"according to manufacturer'?s instructions",
-    r"per (?:the )?manufacturer",
-]
-
-PARTIAL_HINTS = ["briefly", "in brief", "approximately"]
-
-
-REAGENT_HINTS = ["mM", "M ", "buffer", "antibody", "DMEM", "FBS", "PBS", "Tris", "EDTA"]
-EQUIPMENT_HINTS = ["microscope", "spectrometer", "Illumina", "cytometer", "centrifuge", "PCR machine"]
-ANALYSIS_HINTS = ["t-test", "ANOVA", "regression", "p <", "p<", "p =", "statistical", "GraphPad", "SPSS", "R version"]
-SOFTWARE_HINTS = ["python", "version", "R (", "MATLAB", "Fiji", "ImageJ", "github.com"]
-DATASET_HINTS = ["dataset", "GEO accession", "SRA", "Zenodo", "doi.org/10."]
-
-
-def _classify_specificity(sentence: str) -> tuple[str, list[str]]:
-    cited: list[str] = []
-    # find inline ref tokens like [ref_3] or [12]
-    for m in re.finditer(r"\[(ref_\d+|b\d+|\d+)\]", sentence):
-        cited.append(m.group(1))
-    s = sentence.lower()
-    for pat in SHORTCUT_PATTERNS:
-        if re.search(pat, sentence, re.IGNORECASE):
-            return "shortcut_citation", cited
-    for pat in STANDARD_PATTERNS:
-        if re.search(pat, sentence, re.IGNORECASE):
-            return "standard_unspecified", cited
-    if any(h in s for h in PARTIAL_HINTS):
-        return "partially_described", cited
-    return "fully_described", cited
-
-
-def _classify_type(sentence: str) -> str:
-    s = sentence.lower()
-    if any(h.lower() in s for h in ANALYSIS_HINTS):
-        return "analysis"
-    if any(h.lower() in s for h in SOFTWARE_HINTS):
-        return "software"
-    if any(h.lower() in s for h in EQUIPMENT_HINTS):
-        return "equipment"
-    if any(h.lower() in s for h in DATASET_HINTS):
-        return "dataset"
-    if any(h in s for h in ["fixed", "stained", "lysed", "harvested", "cultured", "transfected"]):
-        return "sample_prep"
-    if any(h in s for h in ["incubated", "centrifuged", "washed", "added", "mixed"]):
-        return "procedure"
-    if any(h in s for h in ["mM", "buffer", "antibody"]):
-        return "reagent"
-    return "procedure"
 
 
 class OfflineLLM(LLMClient):
@@ -165,10 +102,10 @@ class OfflineLLM(LLMClient):
             text = text.strip()
             if not text:
                 continue
-            specificity, cited = _classify_specificity(text)
+            specificity, cited = classify_specificity(text)
             claims.append(
                 {
-                    "type": _classify_type(text),
+                    "type": classify_type(text),
                     "specificity": specificity,
                     "cited_ref_ids": cited,
                     "raw_text": text,
@@ -181,10 +118,10 @@ class OfflineLLM(LLMClient):
                 sent = sent.strip()
                 if not sent:
                     continue
-                specificity, cited = _classify_specificity(sent)
+                specificity, cited = classify_specificity(sent)
                 claims.append(
                     {
-                        "type": _classify_type(sent),
+                        "type": classify_type(sent),
                         "specificity": specificity,
                         "cited_ref_ids": cited,
                         "raw_text": sent,
@@ -202,7 +139,7 @@ class OfflineLLM(LLMClient):
             passage = prompt[start:end].strip() if end > start else ""
         else:
             passage = ""
-        specificity, cited = _classify_specificity(passage)
+        specificity, cited = classify_specificity(passage)
         return json.dumps(
             {
                 "fully_describes": specificity == "fully_described" and len(passage.strip()) > 60,

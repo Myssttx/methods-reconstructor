@@ -1,5 +1,6 @@
 """PubMed Central — full-text XML via E-utilities efetch."""
 
+import copy
 import re
 from datetime import UTC, datetime
 
@@ -12,6 +13,7 @@ from app.models import Author, Paper, PaperSource, Reference, Section
 log = get_logger(__name__)
 
 EFETCH = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
+IDCONV = "https://pmc.ncbi.nlm.nih.gov/tools/idconv/api/v1/articles/"
 
 
 def parse_pmc_id(s: str) -> str | None:
@@ -22,6 +24,26 @@ def parse_pmc_id(s: str) -> str | None:
     if s.startswith("pmc:"):
         return s[4:].upper()
     return None
+
+
+async def find_pmc_by_doi(doi: str) -> str | None:
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            response = await client.get(
+                IDCONV,
+                params={
+                    "ids": doi,
+                    "format": "json",
+                    "tool": "methods-reconstructor",
+                },
+            )
+            response.raise_for_status()
+            records = response.json().get("records") or []
+    except Exception as error:
+        log.warning("pmc.idconv_failed", doi=doi, error=str(error))
+        return None
+    pmc_id = str((records[0] if records else {}).get("pmcid") or "")
+    return pmc_id.upper() or None
 
 
 async def fetch_pmc(pmc_id: str) -> Paper | None:
@@ -65,19 +87,9 @@ async def fetch_pmc(pmc_id: str) -> Paper | None:
     if abstract:
         sections["abstract"] = Section(name="abstract", text=abstract)
 
-    method_sections = []
-    for sec in article.findall(".//sec"):
-        title_node = sec.find("title")
-        if title_node is None:
-            continue
-        sec_title = (title_node.text or "").strip().lower()
-        if any(k in sec_title for k in ["method", "material", "experimental"]):
-            if any(ancestor in method_sections for ancestor in sec.iterancestors("sec")):
-                continue
-            method_sections.append(sec)
-    methods_text_parts = ["".join(sec.itertext()).strip() for sec in method_sections]
-    if methods_text_parts:
-        sections["methods"] = Section(name="methods", text="\n\n".join(methods_text_parts))
+    methods_text = _extract_methods_text(article)
+    if methods_text:
+        sections["methods"] = Section(name="methods", text=methods_text)
 
     references: list[Reference] = []
     for i, ref in enumerate(article.findall(".//ref"), start=1):
@@ -109,3 +121,56 @@ async def fetch_pmc(pmc_id: str) -> Paper | None:
         full_text_available="methods" in sections,
         ingested_at=datetime.now(UTC).isoformat(),
     )
+
+
+def _extract_methods_text(article: etree._Element) -> str:
+    method_sections: list[etree._Element] = []
+    for section in article.findall(".//sec"):
+        title_node = section.find("title")
+        if title_node is None:
+            continue
+        section_title = _render_text(title_node).casefold()
+        if any(
+            keyword in section_title
+            for keyword in ["method", "material", "experimental"]
+        ):
+            if any(ancestor in method_sections for ancestor in section.iterancestors("sec")):
+                continue
+            method_sections.append(section)
+
+    parts: list[str] = []
+    for section in method_sections:
+        for node in section.iter():
+            local_name = etree.QName(node).localname
+            if local_name not in {"title", "p"}:
+                continue
+            if _has_excluded_ancestor(node, section):
+                continue
+            text = _render_text(node)
+            if text:
+                parts.append(text)
+    return "\n".join(parts)
+
+
+def _has_excluded_ancestor(
+    node: etree._Element,
+    boundary: etree._Element,
+) -> bool:
+    excluded = {"fig", "table-wrap", "supplementary-material"}
+    for ancestor in node.iterancestors():
+        if ancestor is boundary:
+            return False
+        if etree.QName(ancestor).localname in excluded:
+            return True
+    return False
+
+
+def _render_text(node: etree._Element) -> str:
+    rendered = copy.deepcopy(node)
+    for citation in rendered.xpath(".//xref[@ref-type='bibr']"):
+        reference_id = (citation.get("rid") or "").split()[0].lstrip("#")
+        if reference_id:
+            citation.text = f"[{reference_id}]"
+            for child in list(citation):
+                citation.remove(child)
+    return " ".join("".join(rendered.itertext()).split())

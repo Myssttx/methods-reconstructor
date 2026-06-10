@@ -59,3 +59,6 @@ class Claim(BaseModel):
     resolution_chain: list[ChainStep] = Field(default_factory=list)
     terminal_gap_reason: GapReason | None = None
     confidence: float = 0.0
+    extraction_version: str = ""
+    extraction_mode: str = ""
+    source_methods_hash: str = ""

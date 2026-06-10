@@ -21,7 +21,11 @@ from app.storage.firestore_client import get_store  # noqa: E402
 
 async def run_once(identifier: str, run_number: int) -> dict:
     job_id = f"variability-{run_number}-{uuid.uuid4()}"
-    runner = AgentRunner(job_id=job_id, identifier=identifier)
+    runner = AgentRunner(
+        job_id=job_id,
+        identifier=identifier,
+        reuse_cached_claims=False,
+    )
     await runner.run()
     job = await get_store().get_job(job_id)
     if not job or job.get("status") != "complete" or not job.get("protocol_id"):

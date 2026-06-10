@@ -7,6 +7,7 @@ use Elastic for both the BM25 and kNN passes and fuse client-side with RRF
 the open-source distribution.
 """
 
+import asyncio
 from typing import Any
 
 from app.config import get_settings
@@ -41,50 +42,51 @@ async def hybrid_sentence_search(
     settings = get_settings()
     es = get_es()
 
-    bm25_resp = await es.search(
-        index=settings.elastic_papers_index,
-        query={
-            "bool": {
-                "filter": [{"term": {"paper_id": paper_id}}],
-                "must": [
-                    {
-                        "nested": {
-                            "path": "methods_sentences",
-                            "query": {"match": {"methods_sentences.text": query_text}},
-                            "inner_hits": {"size": top_k, "name": "bm25_sentences"},
-                            "score_mode": "max",
+    bm25_resp, knn_resp = await asyncio.gather(
+        es.search(
+            index=settings.elastic_papers_index,
+            query={
+                "bool": {
+                    "filter": [{"term": {"paper_id": paper_id}}],
+                    "must": [
+                        {
+                            "nested": {
+                                "path": "methods_sentences",
+                                "query": {"match": {"methods_sentences.text": query_text}},
+                                "inner_hits": {"size": top_k, "name": "bm25_sentences"},
+                                "score_mode": "max",
+                            }
                         }
-                    }
-                ],
-            }
-        },
-        size=1,
-    )
-
-    knn_resp = await es.search(
-        index=settings.elastic_papers_index,
-        query={
-            "bool": {
-                "filter": [{"term": {"paper_id": paper_id}}],
-                "must": [
-                    {
-                        "nested": {
-                            "path": "methods_sentences",
-                            "query": {
-                                "knn": {
-                                    "field": "methods_sentences.vector",
-                                    "query_vector": query_vector,
-                                    "num_candidates": top_k * 5,
-                                }
-                            },
-                            "inner_hits": {"size": top_k, "name": "knn_sentences"},
-                            "score_mode": "max",
+                    ],
+                }
+            },
+            size=1,
+        ),
+        es.search(
+            index=settings.elastic_papers_index,
+            query={
+                "bool": {
+                    "filter": [{"term": {"paper_id": paper_id}}],
+                    "must": [
+                        {
+                            "nested": {
+                                "path": "methods_sentences",
+                                "query": {
+                                    "knn": {
+                                        "field": "methods_sentences.vector",
+                                        "query_vector": query_vector,
+                                        "num_candidates": top_k * 5,
+                                    }
+                                },
+                                "inner_hits": {"size": top_k, "name": "knn_sentences"},
+                                "score_mode": "max",
+                            }
                         }
-                    }
-                ],
-            }
-        },
-        size=1,
+                    ],
+                }
+            },
+            size=1,
+        ),
     )
 
     bm25_ranking = _extract_sentence_ranking(bm25_resp, "bm25_sentences")
@@ -131,35 +133,36 @@ async def hybrid_claim_search(
     must_not = [{"term": {"paper_id": exclude_paper_id}}] if exclude_paper_id else []
     must_not.extend({"prefix": {"paper_id": prefix}} for prefix in exclude_paper_prefixes)
 
-    bm25_resp = await es.search(
-        index=settings.elastic_claims_index,
-        query={
-            "bool": {
-                "must": [{"match": {"raw_text": query_text}}],
-                "filter": must_filters,
-                "must_not": must_not,
-            }
-        },
-        size=top_k,
-    )
-
-    knn_resp = await es.search(
-        index=settings.elastic_claims_index,
-        knn={
-            "field": "embedding",
-            "query_vector": query_vector,
-            "k": top_k,
-            "num_candidates": top_k * 5,
-            "filter": {
+    bm25_resp, knn_resp = await asyncio.gather(
+        es.search(
+            index=settings.elastic_claims_index,
+            query={
                 "bool": {
+                    "must": [{"match": {"raw_text": query_text}}],
                     "filter": must_filters,
                     "must_not": must_not,
                 }
-            }
-            if must_filters or must_not
-            else None,
-        },
-        size=top_k,
+            },
+            size=top_k,
+        ),
+        es.search(
+            index=settings.elastic_claims_index,
+            knn={
+                "field": "embedding",
+                "query_vector": query_vector,
+                "k": top_k,
+                "num_candidates": top_k * 5,
+                "filter": {
+                    "bool": {
+                        "filter": must_filters,
+                        "must_not": must_not,
+                    }
+                }
+                if must_filters or must_not
+                else None,
+            },
+            size=top_k,
+        ),
     )
 
     bm25_ids = [h["_id"] for h in bm25_resp["hits"]["hits"]]

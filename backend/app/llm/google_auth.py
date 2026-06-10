@@ -23,13 +23,13 @@ class GoogleAccessTokenProvider:
         self.quota_project_id = self.credentials.get("quota_project_id") or project_id
         self._access_token = ""
         self._expires_at = 0.0
-        self._token_lock = asyncio.Lock()
+        self._lock = asyncio.Lock()
 
     async def token(self) -> str:
         if self._access_token and time.time() < self._expires_at - 60:
             return self._access_token
 
-        async with self._token_lock:
+        async with self._lock:
             if self._access_token and time.time() < self._expires_at - 60:
                 return self._access_token
             payload = (
