@@ -1,9 +1,10 @@
-from __future__ import annotations
 """GROBID — PDF → structured paper content when no clean XML is available."""
+
+from __future__ import annotations
 
 import copy
 import re
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 
 import httpx
 from lxml import etree
@@ -151,7 +152,7 @@ def paper_from_tei(
         references=references,
         open_access_url=source_url,
         full_text_available=bool(methods_parts),
-        ingested_at=datetime.now(timezone.utc).isoformat(),
+        ingested_at=datetime.now(UTC).isoformat(),
     )
 
 

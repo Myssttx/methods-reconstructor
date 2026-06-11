@@ -1,4 +1,4 @@
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -17,7 +17,7 @@ def _metadata_only_paper(*, ingested_at: str) -> Paper:
 
 @pytest.mark.asyncio
 async def test_recent_metadata_only_result_skips_repeated_acquisition(monkeypatch):
-    cached = _metadata_only_paper(ingested_at=datetime.now(timezone.utc).isoformat())
+    cached = _metadata_only_paper(ingested_at=datetime.now(UTC).isoformat())
     fetch_called = False
 
     async def fake_get(_paper_id):
@@ -39,9 +39,9 @@ async def test_recent_metadata_only_result_skips_repeated_acquisition(monkeypatc
 @pytest.mark.asyncio
 async def test_stale_metadata_only_result_is_retried(monkeypatch):
     cached = _metadata_only_paper(
-        ingested_at=(datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
+        ingested_at=(datetime.now(UTC) - timedelta(hours=2)).isoformat()
     )
-    refreshed = _metadata_only_paper(ingested_at=datetime.now(timezone.utc).isoformat())
+    refreshed = _metadata_only_paper(ingested_at=datetime.now(UTC).isoformat())
     indexed: list[Paper] = []
 
     async def fake_get(_paper_id):

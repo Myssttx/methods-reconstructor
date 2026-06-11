@@ -1,4 +1,3 @@
-from __future__ import annotations
 """The recursive citation-chain resolver — the core IP.
 
 For each unresolved claim:
@@ -10,6 +9,8 @@ For each unresolved claim:
 Every call returns a ResolutionResult with a chain trace so the UI can show
 the user *exactly* where the resolution came from (or where it broke).
 """
+
+from __future__ import annotations
 
 import re
 from collections.abc import Awaitable, Callable

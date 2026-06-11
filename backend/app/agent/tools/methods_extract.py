@@ -1,5 +1,6 @@
-from __future__ import annotations
 """Methods decomposition with bounded Gemini Flash and deterministic fallback."""
+
+from __future__ import annotations
 
 import asyncio
 import hashlib

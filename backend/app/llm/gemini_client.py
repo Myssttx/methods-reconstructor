@@ -1,4 +1,3 @@
-from __future__ import annotations
 """Unified LLM client.
 
 Provider priority (chosen by `settings.resolved_llm_provider`):
@@ -10,6 +9,8 @@ Provider priority (chosen by `settings.resolved_llm_provider`):
 Every call returns plain text. Callers that expect JSON parse it themselves
 and handle the offline shape (which is already structured JSON).
 """
+
+from __future__ import annotations
 
 import asyncio
 import hashlib

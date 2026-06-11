@@ -1,5 +1,6 @@
-from __future__ import annotations
 """Papers index DAO — indexing, fetching, and reference lookups."""
+
+from __future__ import annotations
 
 from typing import Any
 

@@ -1,10 +1,11 @@
-from __future__ import annotations
 """PubMed Central — full-text XML via E-utilities efetch."""
+
+from __future__ import annotations
 
 import asyncio
 import copy
 import re
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from time import monotonic
 
 import httpx
@@ -137,7 +138,7 @@ async def fetch_pmc(pmc_id: str) -> Paper | None:
         sections=sections,
         references=references,
         full_text_available="methods" in sections,
-        ingested_at=datetime.now(timezone.utc).isoformat(),
+        ingested_at=datetime.now(UTC).isoformat(),
     )
 
 

@@ -1,4 +1,3 @@
-from __future__ import annotations
 """Hybrid BM25 + dense-vector search with Reciprocal Rank Fusion.
 
 This is the primitive the agent uses everywhere it needs to find specific
@@ -7,6 +6,8 @@ use Elastic for both the BM25 and kNN passes and fuse client-side with RRF
 (k=60, standard) — simpler than relying on rank-features and works against
 the open-source distribution.
 """
+
+from __future__ import annotations
 
 import asyncio
 from typing import Any

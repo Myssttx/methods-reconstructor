@@ -1,5 +1,6 @@
-from __future__ import annotations
 """Deterministic classification rules shared by extraction and offline tests."""
+
+from __future__ import annotations
 
 import re
 

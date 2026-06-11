@@ -1,4 +1,3 @@
-from __future__ import annotations
 """Job + reconstruction store.
 
 Two implementations behind one interface:
@@ -8,6 +7,8 @@ Two implementations behind one interface:
 
 The agent runner doesn't care which one it's using.
 """
+
+from __future__ import annotations
 
 import asyncio
 import json

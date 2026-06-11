@@ -1,4 +1,3 @@
-from __future__ import annotations
 """Pre-cached demo papers.
 
 Stored as JSON files under backend/tests/fixtures/papers/. Lets the demo
@@ -6,8 +5,10 @@ work fully offline and gives the recursive resolver a populated mini-corpus
 to actually resolve against.
 """
 
+from __future__ import annotations
+
 import json
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from app.logging import get_logger
@@ -90,5 +91,5 @@ def load_all_fixtures() -> list[Paper]:
 
 def _hydrate(data: dict) -> Paper:
     if not data.get("ingested_at"):
-        data["ingested_at"] = datetime.now(timezone.utc).isoformat()
+        data["ingested_at"] = datetime.now(UTC).isoformat()
     return Paper.model_validate(data)

@@ -1,9 +1,10 @@
-from __future__ import annotations
 """Per-job approximate LLM token accounting.
 
 Provider tokenizers differ, so this deliberately uses a conservative character
 estimate. The guardrail is for runaway prevention, not billing reconciliation.
 """
+
+from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager

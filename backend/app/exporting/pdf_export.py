@@ -73,7 +73,6 @@ def _truncate_story_to_page_limit(story: list, doc: SimpleDocTemplate) -> list:
     try:
         scratch_doc.build(story)
         scratch.seek(0)
-        from reportlab.pdfgen.canvas import Canvas
         # Count pages via PDF page count heuristic
         content = scratch.read()
         page_count[0] = content.count(b"\n%%Page:")

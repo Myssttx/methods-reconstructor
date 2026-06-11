@@ -2,7 +2,7 @@
 
 import json
 import uuid
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 
 from app.agent.prompts import PROTOCOL_ASSEMBLY_SYSTEM, PROTOCOL_ASSEMBLY_USER
 from app.agent.schemas import AssemblyOutput
@@ -165,7 +165,7 @@ async def assemble(paper: Paper, claims: list[Claim], job_id: str) -> Reconstruc
         section_scores=section_scores,
         sections=sections_out,
         gaps=gaps,
-        generated_at=datetime.now(timezone.utc).isoformat(),
+        generated_at=datetime.now(UTC).isoformat(),
         generation_metadata={
             "prompt_version": settings.app_prompt_version,
             "temperature": settings.llm_temperature,

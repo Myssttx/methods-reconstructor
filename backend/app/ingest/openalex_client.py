@@ -1,5 +1,6 @@
-from __future__ import annotations
 """OpenAlex — paper metadata + reference graph."""
+
+from __future__ import annotations
 
 import re
 

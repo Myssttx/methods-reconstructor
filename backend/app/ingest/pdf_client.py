@@ -1,5 +1,6 @@
-from __future__ import annotations
 """Download a PDF directly or discover one from an open repository landing page."""
+
+from __future__ import annotations
 
 import asyncio
 import ipaddress

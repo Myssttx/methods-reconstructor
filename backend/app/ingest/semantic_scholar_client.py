@@ -1,5 +1,6 @@
-from __future__ import annotations
 """Semantic Scholar — fallback metadata + reference graph."""
+
+from __future__ import annotations
 
 import httpx
 

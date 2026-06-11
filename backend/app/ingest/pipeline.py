@@ -1,4 +1,3 @@
-from __future__ import annotations
 """End-to-end ingest: identifier → Paper → Elastic.
 
 Resolution order:
@@ -11,9 +10,11 @@ The pipeline indexes the resulting Paper into Elastic (papers index) with
 sentence-level vectors for the methods section.
 """
 
+from __future__ import annotations
+
 import asyncio
 import re
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 
 from app.config import get_settings
 from app.ingest import (
@@ -143,8 +144,8 @@ def _negative_acquisition_cache_is_fresh(paper: Paper) -> bool:
     except ValueError:
         return False
     if ingested_at.tzinfo is None:
-        ingested_at = ingested_at.replace(tzinfo=timezone.utc)
-    age_seconds = (datetime.now(timezone.utc) - ingested_at.astimezone(timezone.utc)).total_seconds()
+        ingested_at = ingested_at.replace(tzinfo=UTC)
+    age_seconds = (datetime.now(UTC) - ingested_at.astimezone(UTC)).total_seconds()
     return 0 <= age_seconds < ttl_seconds
 
 
@@ -251,7 +252,7 @@ def _paper_from_openalex(doi: str, meta: dict) -> Paper:
             or (meta.get("open_access") or {}).get("oa_url")
         ),
         full_text_available=False,
-        ingested_at=datetime.now(timezone.utc).isoformat(),
+        ingested_at=datetime.now(UTC).isoformat(),
     )
 
 
@@ -275,7 +276,7 @@ def _paper_from_crossref(doi: str, meta: dict) -> Paper:
         venue=(meta.get("container-title") or [None])[0],
         open_access_url=meta.get("URL"),
         full_text_available=False,
-        ingested_at=datetime.now(timezone.utc).isoformat(),
+        ingested_at=datetime.now(UTC).isoformat(),
     )
 
 

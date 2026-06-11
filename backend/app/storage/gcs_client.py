@@ -1,5 +1,6 @@
-from __future__ import annotations
 """Blob store: GCS in cloud, local filesystem otherwise."""
+
+from __future__ import annotations
 
 import asyncio
 from pathlib import Path

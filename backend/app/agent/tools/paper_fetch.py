@@ -1,5 +1,6 @@
-from __future__ import annotations
 """Resolve a citation to an Elasticsearch-indexed paper with methods text."""
+
+from __future__ import annotations
 
 import asyncio
 import re

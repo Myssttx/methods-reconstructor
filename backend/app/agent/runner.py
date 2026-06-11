@@ -1,4 +1,3 @@
-from __future__ import annotations
 """Top-level agent orchestrator.
 
 Streams `AgentEvent`s as it works. The API layer turns those events into SSE
@@ -6,10 +5,12 @@ messages for the frontend. Job + protocol state is persisted via the JobStore
 (local file in dev, Firestore in cloud).
 """
 
+from __future__ import annotations
+
 import asyncio
 import hashlib
 from collections.abc import AsyncIterator
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from time import time
 
 from app.agent.schemas import AgentEvent
@@ -47,7 +48,7 @@ class JobCapacityError(RuntimeError):
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _error_message(error: Exception) -> str:
