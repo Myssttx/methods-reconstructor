@@ -63,7 +63,7 @@ seed:
 # ---- Native (no-Docker) targets ----
 
 native-setup:
-	cd backend && python3 -m venv .venv && \
+	cd backend && (test -d .venv || python3 -m venv .venv) && \
 		.venv/bin/pip install --upgrade pip && \
 		.venv/bin/pip install \
 			"fastapi>=0.115.0" "uvicorn[standard]>=0.32.0" \
@@ -75,7 +75,7 @@ native-setup:
 			"arxiv==2.1.3" "crossrefapi==1.6.0" \
 			"redis==5.1.1" "structlog==24.4.0" "aiohttp==3.10.10" \
 			"reportlab==4.2.5" "google-cloud-firestore==2.19.0" \
-			"google-adk[mcp]>=1.0.0" "google-genai>=0.2.0" "eval-type-backport==0.2.0" \
+			"google-adk[mcp]>=1.0.0" "google-genai>=0.2.0" \
 			"pytest==8.3.3" "pytest-asyncio==0.24.0"
 	cd frontend && npm install --no-audit --no-fund
 

@@ -38,11 +38,12 @@ async def run_once(identifier: str, run_number: int) -> dict:
 
 async def evaluate(identifier: str, n_runs: int) -> dict:
     configure_logging()
-    protocols = []
     try:
-        for run_number in range(1, n_runs + 1):
-            print(f"Running {run_number}/{n_runs}: {identifier}")
-            protocols.append(await run_once(identifier, run_number))
+        print(f"Running {n_runs} concurrent runs for: {identifier}")
+        protocols = await asyncio.gather(
+            *(run_once(identifier, i + 1) for i in range(n_runs))
+        )
+        protocols = list(protocols)
     finally:
         await close_es()
 

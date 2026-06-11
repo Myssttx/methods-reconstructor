@@ -12,6 +12,7 @@ and handle the offline shape (which is already structured JSON).
 """
 
 import asyncio
+import hashlib
 import json
 import re
 import uuid
@@ -24,6 +25,7 @@ from app.config import get_settings
 from app.llm.budget import charge_llm_text
 from app.llm.google_auth import GoogleAccessTokenProvider
 from app.logging import get_logger
+from app.storage.redis_client import get_cache
 
 log = get_logger(__name__)
 
@@ -384,6 +386,50 @@ class AnthropicLLM(LLMClient):
         raise RuntimeError(f"AnthropicLLM failed after {_MAX_RETRIES} attempts") from last_err
 
 
+class CachedLLMClient(LLMClient):
+    """Wraps an LLMClient with a Redis/Memory cache keyed on prompt and params."""
+    def __init__(self, delegate: LLMClient):
+        self.delegate = delegate
+        self.cache = get_cache()
+
+    async def complete(
+        self,
+        prompt: str,
+        *,
+        model: str = "pro",
+        response_format: str = "text",
+        system: str | None = None,
+        temperature: float = 0.2,
+    ) -> str:
+        # Build cache key
+        payload = json.dumps({
+            "prompt": prompt,
+            "model": model,
+            "response_format": response_format,
+            "system": system,
+            "temperature": temperature,
+        }, sort_keys=True).encode("utf-8")
+        key = f"llm_cache:{hashlib.sha256(payload).hexdigest()}"
+
+        cached = await self.cache.get(key)
+        if cached is not None:
+            log.debug("llm.cache_hit", model=model, len=len(cached))
+            return cached
+
+        # Cache miss
+        response = await self.delegate.complete(
+            prompt,
+            model=model,
+            response_format=response_format,
+            system=system,
+            temperature=temperature
+        )
+        
+        # Cache for 24 hours
+        await self.cache.set(key, response, ttl_seconds=86400)
+        return response
+
+
 # ---------- Factory ----------
 
 
@@ -400,11 +446,11 @@ def get_llm() -> LLMClient:
     try:
         if provider == "gemini" and settings.google_api_key:
             log.info("llm.init", provider="gemini")
-            _client = GeminiLLM(
+            _client = CachedLLMClient(GeminiLLM(
                 api_key=settings.google_api_key,
                 pro_model=settings.gemini_model_pro,
                 flash_model=settings.gemini_model_flash,
-            )
+            ))
             return _client
         if (
             provider == "gemini"
@@ -416,29 +462,31 @@ def get_llm() -> LLMClient:
                 project=settings.resolved_gcp_project_id,
                 location=settings.vertex_ai_location,
             )
-            _client = VertexADCGeminiLLM(
+            _client = CachedLLMClient(VertexADCGeminiLLM(
                 credentials_path=settings.adc_credentials_path,
                 project_id=settings.resolved_gcp_project_id,
                 location=settings.vertex_ai_location,
                 pro_model=settings.gemini_model_pro,
                 flash_model=settings.gemini_model_flash,
                 request_timeout_seconds=settings.llm_request_timeout_seconds,
-            )
+            ))
             return _client
         if provider == "anthropic" and settings.anthropic_api_key:
             log.info("llm.init", provider="anthropic")
-            _client = AnthropicLLM(api_key=settings.anthropic_api_key)
+            _client = CachedLLMClient(AnthropicLLM(api_key=settings.anthropic_api_key))
             return _client
     except Exception as e:
         log.warning("llm.init_failed", provider=provider, error=str(e))
 
     log.info("llm.init", provider="offline")
-    _client = OfflineLLM()
+    _client = CachedLLMClient(OfflineLLM())
     return _client
 
 
 def active_llm_provider() -> str:
     client = get_llm()
+    if isinstance(client, CachedLLMClient):
+        client = client.delegate
     if isinstance(client, GeminiLLM):
         return "gemini"
     if isinstance(client, VertexADCGeminiLLM):

@@ -3,12 +3,22 @@ from __future__ import annotations
 
 from typing import Any
 
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+
 from app.config import get_settings
 from app.logging import get_logger
 from app.models import Claim
 from app.search.elastic_client import get_es
 
 log = get_logger(__name__)
+
+# Retry on transient ES transport errors — up to 3 attempts with exponential backoff.
+_es_retry = retry(
+    retry=retry_if_exception_type(Exception),
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=8),
+    reraise=True,
+)
 
 
 def _claim_doc(claim: Claim, embedding: list[float] | None) -> dict[str, Any]:
@@ -18,6 +28,7 @@ def _claim_doc(claim: Claim, embedding: list[float] | None) -> dict[str, Any]:
     return d
 
 
+@_es_retry
 async def index_claim(claim: Claim, embedding: list[float] | None = None) -> None:
     settings = get_settings()
     es = get_es()
@@ -29,6 +40,7 @@ async def index_claim(claim: Claim, embedding: list[float] | None = None) -> Non
     )
 
 
+@_es_retry
 async def bulk_index_claims(claims: list[Claim], embeddings: list[list[float]] | None = None) -> None:
     settings = get_settings()
     es = get_es()
@@ -50,6 +62,7 @@ async def bulk_index_claims(claims: list[Claim], embeddings: list[list[float]] |
     log.info("claims.bulk_indexed", n=len(claims))
 
 
+@_es_retry
 async def delete_claims_for_paper(paper_id: str) -> None:
     """Replace a paper's claim set instead of accumulating duplicate runs."""
     settings = get_settings()

@@ -7,7 +7,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=(".env", "../.env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     # App
     app_env: Literal["development", "staging", "production"] = "development"
@@ -40,8 +44,8 @@ class Settings(BaseSettings):
     gcp_region: str = "us-central1"
     google_application_credentials: str = ""
     vertex_ai_location: str = "us-central1"
-    gemini_model_pro: str = "gemini-3.0-pro"
-    gemini_model_flash: str = "gemini-3.0-flash"
+    gemini_model_pro: str = "gemini-3.1-pro"
+    gemini_model_flash: str = "gemini-3.5-flash"
     gemini_embedding_model: str = "text-embedding-005"
     enable_vertex_embeddings: bool = False
 

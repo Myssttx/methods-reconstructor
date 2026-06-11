@@ -66,7 +66,7 @@ def _build_tools() -> list:
 
 root_agent = Agent(
     name="methods_reconstructor",
-    model=os.getenv("ADK_MODEL", "gemini-3.0-flash"),
+    model=os.getenv("ADK_MODEL", "gemini-3.5-flash"),
     description=(
         "A research agent that reconstructs difficult cancer-paper methods by "
         "planning, indexing evidence in Elastic, following citation chains, and "

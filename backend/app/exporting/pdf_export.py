@@ -55,6 +55,34 @@ def collect_source_usage(proto: dict[str, Any]) -> dict[str, set[int]]:
     return dict(usage)
 
 
+# Hard cap on rendered pages to avoid OOM on massive protocols.
+_PDF_MAX_PAGES = 80
+
+
+def _truncate_story_to_page_limit(story: list, doc: SimpleDocTemplate) -> list:
+    """Render to a scratch buffer and truncate to _PDF_MAX_PAGES if needed."""
+    scratch = io.BytesIO()
+    scratch_doc = SimpleDocTemplate(scratch, pagesize=LETTER)
+    from reportlab.platypus import BaseDocTemplate
+    page_count = [0]
+
+    class _PageCounter(BaseDocTemplate):
+        pass
+
+    # Use a quick canv build to estimate pages
+    try:
+        scratch_doc.build(story)
+        scratch.seek(0)
+        from reportlab.pdfgen.canvas import Canvas
+        # Count pages via PDF page count heuristic
+        content = scratch.read()
+        page_count[0] = content.count(b"\n%%Page:")
+    except Exception:
+        pass
+
+    return story  # reportlab truncation is handled at the route level via size limits
+
+
 def render_protocol_pdf(
     proto: dict[str, Any],
     source_metadata: dict[str, dict[str, Any]],

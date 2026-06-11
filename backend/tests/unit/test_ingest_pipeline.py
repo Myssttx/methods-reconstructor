@@ -66,3 +66,27 @@ async def test_stale_metadata_only_result_is_retried(monkeypatch):
 
     assert result == refreshed
     assert indexed == [refreshed]
+
+
+@pytest.mark.asyncio
+async def test_all_providers_fail_simultaneously_returns_none(monkeypatch):
+    """Test what happens when PMC, OpenAlex, and CrossRef all fail simultaneously for a DOI."""
+    async def fake_get(*args, **kwargs):
+        return None
+
+    async def fake_pmc(*args, **kwargs):
+        return None
+
+    async def fake_openalex(*args, **kwargs):
+        return None
+
+    async def fake_crossref(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(pipeline, "get_paper_model", fake_get)
+    monkeypatch.setattr(pipeline.pmc_client, "find_pmc_by_doi", fake_pmc)
+    monkeypatch.setattr(pipeline.openalex_client, "fetch_openalex_by_doi", fake_openalex)
+    monkeypatch.setattr(pipeline.crossref_client, "fetch_crossref", fake_crossref)
+
+    result = await pipeline.ingest_identifier("10.1000/total_failure")
+    assert result is None

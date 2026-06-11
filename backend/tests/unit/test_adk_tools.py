@@ -13,7 +13,7 @@ def test_reconstruction_plan_keeps_elastic_central():
 
 def test_google_adk_entrypoint_loads_production_tools():
     assert root_agent.name == "methods_reconstructor"
-    assert root_agent.model == "gemini-3.0-flash"
+    assert root_agent.model == "gemini-3.5-flash"
     assert len(root_agent.tools) == 4
 
 
