@@ -45,3 +45,16 @@ def test_missing_configured_credentials_fall_back_to_standard_adc(tmp_path, monk
     assert settings.adc_credentials_path == str(credentials)
     assert settings.resolved_gcp_project_id == "quota-project"
     assert settings.resolved_llm_provider == "gemini"
+
+
+def test_cloud_runtime_project_enables_vertex_without_local_adc(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    settings = Settings(
+        llm_provider="auto",
+        google_application_credentials="./missing-service-account.json",
+        gcp_project_id="cloud-project",
+    )
+
+    assert settings.adc_credentials_path == ""
+    assert settings.resolved_gcp_project_id == "cloud-project"
+    assert settings.resolved_llm_provider == "gemini"

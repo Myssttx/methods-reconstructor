@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Job + reconstruction store.
 
 Two implementations behind one interface:

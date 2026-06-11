@@ -81,6 +81,7 @@ export interface ReconstructedProtocol {
   sections: Record<string, Claim[]>;
   gaps: Gap[];
   generated_at: string;
+  generation_metadata: Record<string, string | number>;
   version: string;
 }
 
@@ -102,4 +103,5 @@ export interface ReconstructionJob {
     | "failed";
   protocol_id: string | null;
   error: string | null;
+  timings_ms: Record<string, number>;
 }

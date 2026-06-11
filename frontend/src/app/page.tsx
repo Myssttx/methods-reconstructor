@@ -1,4 +1,5 @@
 import { ArrowRight, CheckCircle2, FileText, Search, TriangleAlert } from "lucide-react";
+import Link from "next/link";
 
 import { PaperInput } from "@/components/paper-input";
 import { ScrollStory } from "@/components/scroll-story";
@@ -23,9 +24,12 @@ export default function Home() {
             every step traced back to the paper it came from.
           </p>
           <div className="mt-7 flex items-center justify-center gap-6 text-lg">
-            <a href="#try" className="inline-flex items-center gap-1 text-accent hover:underline">
+            <Link
+              href="/tool"
+              className="inline-flex items-center gap-1 text-accent hover:underline"
+            >
               Try it <ArrowRight className="h-4 w-4" />
-            </a>
+            </Link>
             <a
               href="https://github.com/Myssttx/methods-reconstructor"
               className="inline-flex items-center gap-1 text-accent hover:underline"

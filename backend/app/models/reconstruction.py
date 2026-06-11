@@ -15,6 +15,9 @@ class SectionScore(BaseModel):
 class Gap(BaseModel):
     claim_id: str
     raw_text: str
+    type: str = ""
+    specificity: str = ""
+    cited_ref_ids: list[str] = Field(default_factory=list)
     reason: str
     chain_trace: list[dict[str, Any]] = Field(default_factory=list)
     suggested_action: str
@@ -36,4 +39,5 @@ class ReconstructedProtocol(BaseModel):
     sections: dict[str, list[Claim]] = Field(default_factory=dict)
     gaps: list[Gap] = Field(default_factory=list)
     generated_at: str
+    generation_metadata: dict[str, Any] = Field(default_factory=dict)
     version: str = "1.0.0"

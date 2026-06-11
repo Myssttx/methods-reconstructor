@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Blob store: GCS in cloud, local filesystem otherwise."""
 
 import asyncio

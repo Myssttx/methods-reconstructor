@@ -92,9 +92,10 @@ reproducibility score. `reproducibility_score` remains only as a compatibility f
 ## Deployment boundary
 
 Completed jobs and protocols are persisted, and completed pages can reload without a
-live runner. Active execution is still process-local. Production should place
-`AgentRunner.run()` behind a durable queue such as Cloud Tasks before enabling
-multi-instance autoscaling.
+live runner. New jobs are placed on a Redis queue and executed by a separate worker;
+events are retained in Redis for reconnecting clients. The current worker removes a
+job before execution, so production still needs retry accounting and a dead-letter
+queue before enabling unattended multi-instance autoscaling.
 
 ## File map
 

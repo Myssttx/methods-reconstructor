@@ -2,7 +2,7 @@
 
 import json
 import uuid
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 
 from app.agent.prompts import PROTOCOL_ASSEMBLY_SYSTEM, PROTOCOL_ASSEMBLY_USER
 from app.agent.schemas import AssemblyOutput
@@ -82,7 +82,7 @@ async def assemble(paper: Paper, claims: list[Claim], job_id: str) -> Reconstruc
     )
     settings = get_settings()
     data = AssemblyOutput()
-    if len(claims_payload) <= settings.app_max_assembly_chars:
+    if settings.app_use_llm_assembly and len(claims_payload) <= settings.app_max_assembly_chars:
         user = PROTOCOL_ASSEMBLY_USER.format(
             paper_title=paper.title,
             paper_id=paper.paper_id,
@@ -94,13 +94,22 @@ async def assemble(paper: Paper, claims: list[Claim], job_id: str) -> Reconstruc
             system=PROTOCOL_ASSEMBLY_SYSTEM,
             model="pro",
             response_format="json",
+            temperature=settings.llm_temperature,
         )
         try:
             data = AssemblyOutput.model_validate(json.loads(resp))
         except (json.JSONDecodeError, ValueError):
             log.warning("assemble.bad_json", preview=resp[:200])
     else:
-        log.info("assemble.deterministic", payload_chars=len(claims_payload))
+        log.info(
+            "assemble.deterministic",
+            payload_chars=len(claims_payload),
+            reason=(
+                "disabled"
+                if not settings.app_use_llm_assembly
+                else "payload_too_large"
+            ),
+        )
 
     claims_by_id = {c.claim_id: c for c in claims}
     eligible_ids = {
@@ -135,6 +144,9 @@ async def assemble(paper: Paper, claims: list[Claim], job_id: str) -> Reconstruc
             Gap(
                 claim_id=claim.claim_id,
                 raw_text=claim.raw_text,
+                type=claim.type.value,
+                specificity=claim.specificity.value,
+                cited_ref_ids=claim.cited_ref_ids,
                 reason=reason.value,
                 chain_trace=[step.model_dump() for step in claim.resolution_chain],
                 suggested_action=_suggest_action(reason),
@@ -153,7 +165,24 @@ async def assemble(paper: Paper, claims: list[Claim], job_id: str) -> Reconstruc
         section_scores=section_scores,
         sections=sections_out,
         gaps=gaps,
-        generated_at=datetime.now(UTC).isoformat(),
+        generated_at=datetime.now(timezone.utc).isoformat(),
+        generation_metadata={
+            "prompt_version": settings.app_prompt_version,
+            "temperature": settings.llm_temperature,
+            "decomposition_model": settings.gemini_model_flash,
+            "assembly_model": settings.gemini_model_pro,
+            "embedding_model": settings.gemini_embedding_model,
+            "extraction_mode": ",".join(
+                sorted({claim.extraction_mode or "unknown" for claim in claims})
+            ),
+            "extraction_version": settings.methods_extraction_version,
+            "assembly_mode": (
+                "llm"
+                if settings.app_use_llm_assembly
+                and len(claims_payload) <= settings.app_max_assembly_chars
+                else "deterministic"
+            ),
+        },
     )
 
 

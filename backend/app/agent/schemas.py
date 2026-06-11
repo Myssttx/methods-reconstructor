@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Pydantic shapes the agent uses internally for tool I/O."""
 
 from typing import Literal

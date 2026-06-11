@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Unpaywall — find an open-access PDF for a paywalled DOI."""
 
 import httpx

@@ -1,3 +1,4 @@
+from __future__ import annotations
 """End-to-end ingest: identifier → Paper → Elastic.
 
 Resolution order:
@@ -12,8 +13,9 @@ sentence-level vectors for the methods section.
 
 import asyncio
 import re
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 
+from app.config import get_settings
 from app.ingest import (
     arxiv_client,
     crossref_client,
@@ -34,7 +36,7 @@ log = get_logger(__name__)
 
 SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
 ABBREVIATION_END = re.compile(
-    r"\b(?:et al|e\.g|i\.e|fig|eq|dr|mr|mrs|ms|prof|vs|no)\.$",
+    r"\b(?:et al|e\.g|i\.e|fig|eq|dr|mr|mrs|ms|prof|vs|no|st|inc|co|corp|ltd)\.$",
     re.IGNORECASE,
 )
 _ingest_locks: dict[str, asyncio.Lock] = {}
@@ -119,6 +121,9 @@ async def _ingest_canonical(
             if cached and cached.methods_text():
                 log.info("ingest.elastic_cache_hit", paper_id=paper_id)
                 return cached
+            if cached and _negative_acquisition_cache_is_fresh(cached):
+                log.info("ingest.elastic_negative_cache_hit", paper_id=paper_id)
+                return cached
             paper = await fetcher()
             if paper is None:
                 return cached
@@ -129,12 +134,34 @@ async def _ingest_canonical(
                 _ingest_locks.pop(paper_id, None)
 
 
+def _negative_acquisition_cache_is_fresh(paper: Paper) -> bool:
+    ttl_seconds = get_settings().app_negative_acquisition_cache_seconds
+    if ttl_seconds <= 0 or not paper.ingested_at:
+        return False
+    try:
+        ingested_at = datetime.fromisoformat(paper.ingested_at.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if ingested_at.tzinfo is None:
+        ingested_at = ingested_at.replace(tzinfo=timezone.utc)
+    age_seconds = (datetime.now(timezone.utc) - ingested_at.astimezone(timezone.utc)).total_seconds()
+    return 0 <= age_seconds < ttl_seconds
+
+
 async def _fetch_arxiv(arxiv_id: str) -> Paper | None:
     paper = await asyncio.to_thread(arxiv_client.fetch_arxiv, arxiv_id)
     return await _enrich_from_open_access_pdf(paper) if paper else None
 
 
 async def _fetch_doi(doi: str) -> Paper | None:
+    pmc_id = await pmc_client.find_pmc_by_doi(doi)
+    if pmc_id:
+        pmc_paper = await pmc_client.fetch_pmc(pmc_id)
+        if pmc_paper and pmc_paper.methods_text():
+            pmc_paper.paper_id = f"doi:{doi}"
+            log.info("ingest.pmc_doi_hit", doi=doi, pmc_id=pmc_id)
+            return pmc_paper
+
     meta = await openalex_client.fetch_openalex_by_doi(doi)
     if meta:
         paper = _paper_from_openalex(doi, meta)
@@ -224,7 +251,7 @@ def _paper_from_openalex(doi: str, meta: dict) -> Paper:
             or (meta.get("open_access") or {}).get("oa_url")
         ),
         full_text_available=False,
-        ingested_at=datetime.now(UTC).isoformat(),
+        ingested_at=datetime.now(timezone.utc).isoformat(),
     )
 
 
@@ -248,7 +275,7 @@ def _paper_from_crossref(doi: str, meta: dict) -> Paper:
         venue=(meta.get("container-title") or [None])[0],
         open_access_url=meta.get("URL"),
         full_text_available=False,
-        ingested_at=datetime.now(UTC).isoformat(),
+        ingested_at=datetime.now(timezone.utc).isoformat(),
     )
 
 

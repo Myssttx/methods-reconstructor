@@ -65,6 +65,7 @@ const EVENT_TONE: Record<string, "good" | "warn" | "bad" | "default"> = {
   decompose: "good",
   complete: "good",
   assemble: "good",
+  performance: "good",
   "chain.fetching": "default",
   "chain.fetch_failed": "warn",
   error: "bad",
@@ -88,6 +89,8 @@ function labelFor(type: string): string {
       return "ASSEMBLED";
     case "complete":
       return "COMPLETE";
+    case "performance":
+      return "TIMING";
     case "error":
       return "ERROR";
     default:
@@ -100,7 +103,9 @@ function describe(ev: AgentEvent): string {
   if (ev.type === "ingest") return `${d.title ?? ""} · ${d.n_references ?? 0} refs`;
   if (ev.type === "decompose") {
     const bySpec = (d.by_specificity || {}) as Record<string, number>;
-    return Object.entries(bySpec).map(([k, v]) => `${k}: ${v}`).join("  ");
+    const counts = Object.entries(bySpec).map(([k, v]) => `${k}: ${v}`).join("  ");
+    const mode = String(d.extraction_mode || "unknown");
+    return d.cache_hit ? `cached · ${mode}  ${counts}` : `${mode}  ${counts}`;
   }
   if (ev.type === "status") return String(d.message ?? "");
   if (ev.type === "claim_resolved") {
@@ -110,6 +115,12 @@ function describe(ev: AgentEvent): string {
   if (ev.type === "chain.fetching") return `ref ${d.ref_id} (depth ${d.depth})`;
   if (ev.type === "chain.fetch_failed") return `ref ${d.ref_id} — unavailable`;
   if (ev.type === "assemble") return `score ${d.score} · ${d.n_gaps} gaps`;
+  if (ev.type === "performance") {
+    const timings = (d.timings_ms || {}) as Record<string, number>;
+    return Object.entries(timings)
+      .map(([name, milliseconds]) => `${name}: ${(milliseconds / 1000).toFixed(1)}s`)
+      .join("  ");
+  }
   if (ev.type === "complete") return "Protocol ready";
   if (ev.type === "error") return String(d.message ?? "");
   return JSON.stringify(d).slice(0, 80);

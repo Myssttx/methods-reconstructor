@@ -10,6 +10,7 @@ import json
 
 from app.agent.prompts import METHODS_LOCATOR_SYSTEM, METHODS_LOCATOR_USER
 from app.agent.schemas import LocatorDecision, LocatorResult
+from app.config import get_settings
 from app.llm.embeddings import aembed_text
 from app.llm.gemini_client import get_llm
 from app.logging import get_logger
@@ -50,11 +51,13 @@ async def locate(ref_paper: Paper, claim: Claim, top_k: int = 8) -> LocatorResul
         passage_text=passage_text,
     )
     llm = get_llm()
+    settings = get_settings()
     resp = await llm.complete(
         prompt=user,
         system=METHODS_LOCATOR_SYSTEM,
         model="flash",
         response_format="json",
+        temperature=settings.llm_temperature,
     )
 
     try:

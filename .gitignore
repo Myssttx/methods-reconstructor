@@ -16,6 +16,10 @@ out/
 
 # Env / secrets
 .env
+.env.*
+!.env.example
+aayush_env.txt
+*.env
 .env.local
 .env.*.local
 service-account-key.json
@@ -39,4 +43,6 @@ Thumbs.db
 dist/
 build/
 eval/reports/*.json
+eval/reports/*.jsonl
+eval/reports/*/
 !eval/reports/.gitkeep

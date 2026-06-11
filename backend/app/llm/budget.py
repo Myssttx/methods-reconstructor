@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Per-job approximate LLM token accounting.
 
 Provider tokenizers differ, so this deliberately uses a conservative character

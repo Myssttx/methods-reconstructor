@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Crossref — DOI metadata fallback."""
 
 import asyncio

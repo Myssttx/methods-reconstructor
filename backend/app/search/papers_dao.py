@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Papers index DAO — indexing, fetching, and reference lookups."""
 
 from typing import Any
@@ -8,7 +9,7 @@ from app.models import Paper, PaperSource, Reference, Section
 from app.search.elastic_client import get_es
 
 log = get_logger(__name__)
-PAPER_INDEX_VERSION = "3"
+PAPER_INDEX_VERSION = "4"
 
 
 async def index_paper(paper: Paper, sentences: list[dict[str, Any]]) -> None:

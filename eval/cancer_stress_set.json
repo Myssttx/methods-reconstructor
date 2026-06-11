@@ -1,0 +1,176 @@
+{
+  "_schema": "v2",
+  "_note": "Ten cancer papers with public PMC full text, substantial methods sections, and citation-dependent methodological statements. Selection statistics were measured from PMC XML with the production sentence splitter and deterministic specificity rules.",
+  "papers": [
+    {
+      "identifier": "PMC6727976",
+      "title": "Cross-species single-cell analysis of pancreatic ductal adenocarcinoma reveals antigen-presenting cancer-associated fibroblasts",
+      "access_expectation": "PMC full-text XML",
+      "selection_evidence": {
+        "method_sentences": 111,
+        "references": 88,
+        "citation_bearing_method_sentences": 12,
+        "shortcut_candidates": 5
+      },
+      "complexity": [
+        "human and mouse tissue",
+        "single-cell RNA-seq",
+        "cell-state analysis",
+        "cross-species integration"
+      ]
+    },
+    {
+      "identifier": "PMC5878932",
+      "title": "Single-cell transcriptomic analysis of primary and metastatic tumor ecosystems in head and neck cancer",
+      "access_expectation": "PMC full-text XML",
+      "selection_evidence": {
+        "method_sentences": 268,
+        "references": 52,
+        "citation_bearing_method_sentences": 15,
+        "shortcut_candidates": 11
+      },
+      "complexity": [
+        "primary and metastatic tumors",
+        "single-cell RNA-seq",
+        "tumor dissociation",
+        "copy-number and cell-state analysis"
+      ]
+    },
+    {
+      "identifier": "PMC6132072",
+      "title": "A Structured Tumor-Immune Microenvironment in Triple Negative Breast Cancer Revealed by Multiplexed Ion Beam Imaging",
+      "access_expectation": "PMC full-text XML",
+      "selection_evidence": {
+        "method_sentences": 70,
+        "references": 54,
+        "citation_bearing_method_sentences": 2,
+        "shortcut_candidates": 2
+      },
+      "complexity": [
+        "multiplexed ion beam imaging",
+        "antibody conjugation",
+        "image registration",
+        "spatial cell analysis"
+      ]
+    },
+    {
+      "identifier": "PMC6348010",
+      "title": "Single-cell Map of Diverse Immune Phenotypes in the Breast Tumor Microenvironment",
+      "access_expectation": "PMC full-text XML",
+      "selection_evidence": {
+        "method_sentences": 645,
+        "references": 47,
+        "citation_bearing_method_sentences": 37,
+        "shortcut_candidates": 7
+      },
+      "complexity": [
+        "large single-cell methods section",
+        "immune phenotyping",
+        "tumor dissociation",
+        "computational trajectory analysis"
+      ]
+    },
+    {
+      "identifier": "PMC9044823",
+      "title": "A single-cell and spatially resolved atlas of human breast cancers",
+      "access_expectation": "PMC full-text XML",
+      "selection_evidence": {
+        "method_sentences": 158,
+        "references": 71,
+        "citation_bearing_method_sentences": 31,
+        "shortcut_candidates": 4
+      },
+      "complexity": [
+        "single-cell RNA-seq",
+        "spatial transcriptomics",
+        "breast tumor tissue processing",
+        "cross-platform integration"
+      ]
+    },
+    {
+      "identifier": "PMC7608385",
+      "title": "A pan-cancer blueprint of the heterogeneous tumor microenvironment revealed by single-cell profiling",
+      "access_expectation": "PMC full-text XML",
+      "selection_evidence": {
+        "method_sentences": 97,
+        "references": 103,
+        "citation_bearing_method_sentences": 0,
+        "shortcut_candidates": 3
+      },
+      "complexity": [
+        "multi-cancer cohort",
+        "single-cell RNA-seq",
+        "tumor microenvironment",
+        "cross-cohort integration"
+      ]
+    },
+    {
+      "identifier": "PMC7220853",
+      "title": "A single-cell and single-nucleus RNA-Seq toolbox for fresh and frozen human tumors",
+      "access_expectation": "PMC full-text XML",
+      "selection_evidence": {
+        "method_sentences": 300,
+        "references": 45,
+        "citation_bearing_method_sentences": 0,
+        "shortcut_candidates": 17
+      },
+      "complexity": [
+        "fresh and frozen tumors",
+        "single-cell and single-nucleus RNA-seq",
+        "protocol benchmarking",
+        "multi-tumor processing"
+      ]
+    },
+    {
+      "identifier": "PMC6703186",
+      "title": "An integrative model of cellular states, plasticity and genetics for glioblastoma",
+      "access_expectation": "PMC full-text XML",
+      "selection_evidence": {
+        "method_sentences": 262,
+        "references": 34,
+        "citation_bearing_method_sentences": 15,
+        "shortcut_candidates": 5
+      },
+      "complexity": [
+        "glioblastoma single-cell RNA-seq",
+        "genetic subclones",
+        "cell-state modeling",
+        "functional validation"
+      ]
+    },
+    {
+      "identifier": "PMC5424158",
+      "title": "Single-cell RNA-seq enables comprehensive tumour and immune cell profiling in primary breast cancer",
+      "access_expectation": "PMC full-text XML",
+      "selection_evidence": {
+        "method_sentences": 91,
+        "references": 60,
+        "citation_bearing_method_sentences": 10,
+        "shortcut_candidates": 2
+      },
+      "complexity": [
+        "primary breast tumors",
+        "single-cell RNA-seq",
+        "tumor and immune classification",
+        "copy-number analysis"
+      ]
+    },
+    {
+      "identifier": "PMC7484178",
+      "title": "Therapy-Induced Evolution of Human Lung Cancer Revealed by Single-Cell RNA Sequencing",
+      "access_expectation": "PMC full-text XML",
+      "selection_evidence": {
+        "method_sentences": 265,
+        "references": 170,
+        "citation_bearing_method_sentences": 33,
+        "shortcut_candidates": 5
+      },
+      "complexity": [
+        "longitudinal lung cancer biopsies",
+        "therapy response",
+        "single-cell RNA-seq",
+        "large citation graph"
+      ]
+    }
+  ]
+}

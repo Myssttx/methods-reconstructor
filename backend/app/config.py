@@ -18,12 +18,22 @@ class Settings(BaseSettings):
     app_agent_timeout_seconds: int = 600
     app_max_concurrent_jobs: int = 2
     app_max_concurrent_claims: int = 4
-    app_max_methods_chunk_chars: int = 40_000
+    app_max_concurrent_llm_chunks: int = 3
+    app_max_methods_chunk_chars: int = 3_000
+    app_llm_chunk_timeout_seconds: float = 15.0
+    app_extraction_wall_budget_seconds: float = 35.0
+    app_methods_extraction_mode: Literal["hybrid", "llm", "rules"] = "hybrid"
+    app_large_methods_sentence_threshold: int = 40
     app_max_assembly_chars: int = 100_000
     app_max_queue_depth: int = 50  # C-5: max pending jobs in Redis queue
+    app_negative_acquisition_cache_seconds: int = 3_600
 
     # Auth (C-4: set API_KEY env var to enable X-API-Key protection)
     api_key: str = ""  # empty = open access (dev mode)
+    app_use_llm_assembly: bool = False
+    app_reuse_cached_claims: bool = True
+    app_prompt_version: str = "2026-06-09"
+    llm_temperature: float = 0.0
 
     # GCP / Vertex (optional)
     gcp_project_id: str = ""
@@ -33,6 +43,7 @@ class Settings(BaseSettings):
     gemini_model_pro: str = "gemini-3.0-pro"
     gemini_model_flash: str = "gemini-3.0-flash"
     gemini_embedding_model: str = "text-embedding-005"
+    enable_vertex_embeddings: bool = False
 
     # LLM provider
     google_api_key: str = ""
@@ -66,6 +77,8 @@ class Settings(BaseSettings):
     openalex_email: str = ""
     semantic_scholar_api_key: str = ""
     unpaywall_email: str = ""
+    ncbi_email: str = ""
+    ncbi_api_key: str = ""
     grobid_url: str = "http://localhost:8070"
 
     # Local fallback paths
@@ -103,11 +116,22 @@ class Settings(BaseSettings):
             return self.llm_provider
         if self.google_api_key:
             return "gemini"
-        if self.adc_credentials_path and self.resolved_gcp_project_id:
+        if self.resolved_gcp_project_id:
             return "gemini"
         if self.anthropic_api_key:
             return "anthropic"
         return "offline"
+
+    @property
+    def methods_extraction_version(self) -> str:
+        return (
+            f"{self.app_prompt_version}:rules-v3:{self.app_methods_extraction_mode}:"
+            f"large-{self.app_large_methods_sentence_threshold}:"
+            f"{self.gemini_model_flash}:{self.llm_temperature:g}:"
+            f"chunk-{self.app_max_methods_chunk_chars}:"
+            f"timeout-{self.app_llm_chunk_timeout_seconds:g}:"
+            f"budget-{self.app_extraction_wall_budget_seconds:g}"
+        )
 
 
 @lru_cache

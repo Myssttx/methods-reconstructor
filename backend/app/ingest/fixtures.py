@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Pre-cached demo papers.
 
 Stored as JSON files under backend/tests/fixtures/papers/. Lets the demo
@@ -6,7 +7,7 @@ to actually resolve against.
 """
 
 import json
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 from pathlib import Path
 
 from app.logging import get_logger
@@ -89,5 +90,5 @@ def load_all_fixtures() -> list[Paper]:
 
 def _hydrate(data: dict) -> Paper:
     if not data.get("ingested_at"):
-        data["ingested_at"] = datetime.now(UTC).isoformat()
+        data["ingested_at"] = datetime.now(timezone.utc).isoformat()
     return Paper.model_validate(data)

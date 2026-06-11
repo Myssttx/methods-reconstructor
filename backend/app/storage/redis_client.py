@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Lightweight cache. Uses Redis if reachable, falls back to in-memory dict."""
 
 import json

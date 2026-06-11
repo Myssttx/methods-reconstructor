@@ -1,6 +1,7 @@
+from __future__ import annotations
 """Thin wrapper exposed as an agent-callable tool name (matches the spec)."""
 
-from typing import Any
+from typing import Any, Optional
 
 from app.llm.embeddings import aembed_text
 from app.search.hybrid_search import hybrid_claim_search
@@ -10,7 +11,7 @@ async def elastic_search(
     query: str,
     *,
     index: str = "claims",
-    filters: dict[str, Any] | None = None,
+    filters: Optional[dict[str, Any]] = None,
     top_k: int = 10,
 ) -> list[dict[str, Any]]:
     if index != "claims":

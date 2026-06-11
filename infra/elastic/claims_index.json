@@ -21,6 +21,9 @@
       },
       "terminal_gap_reason": {"type": "keyword"},
       "confidence": {"type": "float"},
+      "extraction_version": {"type": "keyword"},
+      "extraction_mode": {"type": "keyword"},
+      "source_methods_hash": {"type": "keyword"},
       "embedding": {
         "type": "dense_vector",
         "dims": 384,
