@@ -11,7 +11,9 @@ from pathlib import Path
 from statistics import mean, pstdev
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
+project_root = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(project_root / "backend"))
+sys.path.insert(0, str(project_root))
 
 from app.agent.runner import AgentRunner
 from app.evaluation.variability import claims_from_protocol, variability_report

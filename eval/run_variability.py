@@ -8,7 +8,9 @@ import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
+project_root = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(project_root / "backend"))
+sys.path.insert(0, str(project_root))
 
 from app.agent.runner import AgentRunner  # noqa: E402
 from app.config import get_settings  # noqa: E402
