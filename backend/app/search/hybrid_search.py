@@ -42,9 +42,6 @@ async def hybrid_sentence_search(
     Returns sentence-level hits with text and sentence_id.
     """
     settings = get_settings()
-    if not settings.enable_elastic:
-        log.info("hybrid.sentence_search.skip", reason="elastic_disabled", paper_id=paper_id)
-        return []
     es = get_es()
 
     bm25_resp, knn_resp = await asyncio.gather(
@@ -129,9 +126,6 @@ async def hybrid_claim_search(
 ) -> list[dict[str, Any]]:
     """Corpus-wide hybrid search over claims (used for partial-claim augmentation)."""
     settings = get_settings()
-    if not settings.enable_elastic:
-        log.info("hybrid.claim_search.skip", reason="elastic_disabled")
-        return []
     es = get_es()
 
     must_filters: list[dict] = []

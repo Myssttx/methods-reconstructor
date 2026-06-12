@@ -21,16 +21,14 @@ class ReconstructionRequest(BaseModel):
 @router.post("")
 async def create_reconstruction(req: ReconstructionRequest):
     settings = get_settings()
-    if settings.app_queue_mode == "redis":
-        from app.agent.queue import get_redis  # avoid circular at module level
-
-        r = get_redis()
-        queue_depth = await r.llen("job_queue")
-        if queue_depth >= settings.app_max_queue_depth:
-            raise HTTPException(
-                status_code=429,
-                detail=f"Queue full ({queue_depth}/{settings.app_max_queue_depth}). Try again later.",
-            )
+    from app.agent.queue import get_redis  # avoid circular at module level
+    r = get_redis()
+    queue_depth = await r.llen("job_queue")
+    if queue_depth >= settings.app_max_queue_depth:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Queue full ({queue_depth}/{settings.app_max_queue_depth}). Try again later.",
+        )
     job_id = await enqueue(req.identifier.strip())
     return {
         "job_id": job_id,

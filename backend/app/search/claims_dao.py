@@ -31,9 +31,6 @@ def _claim_doc(claim: Claim, embedding: list[float] | None) -> dict[str, Any]:
 @_es_retry
 async def index_claim(claim: Claim, embedding: list[float] | None = None) -> None:
     settings = get_settings()
-    if not settings.enable_elastic:
-        log.info("claims.index.skip", reason="elastic_disabled", claim_id=claim.claim_id)
-        return
     es = get_es()
     await es.index(
         index=settings.elastic_claims_index,
@@ -46,9 +43,6 @@ async def index_claim(claim: Claim, embedding: list[float] | None = None) -> Non
 @_es_retry
 async def bulk_index_claims(claims: list[Claim], embeddings: list[list[float]] | None = None) -> None:
     settings = get_settings()
-    if not settings.enable_elastic:
-        log.info("claims.bulk_index.skip", reason="elastic_disabled", n=len(claims))
-        return
     es = get_es()
     ops: list[dict] = []
     for i, claim in enumerate(claims):
@@ -72,9 +66,6 @@ async def bulk_index_claims(claims: list[Claim], embeddings: list[list[float]] |
 async def delete_claims_for_paper(paper_id: str) -> None:
     """Replace a paper's claim set instead of accumulating duplicate runs."""
     settings = get_settings()
-    if not settings.enable_elastic:
-        log.info("claims.delete.skip", reason="elastic_disabled", paper_id=paper_id)
-        return
     es = get_es()
     await es.delete_by_query(
         index=settings.elastic_claims_index,
@@ -86,9 +77,6 @@ async def delete_claims_for_paper(paper_id: str) -> None:
 
 async def claims_for_paper(paper_id: str) -> list[dict[str, Any]]:
     settings = get_settings()
-    if not settings.enable_elastic:
-        log.info("claims.search.skip", reason="elastic_disabled", paper_id=paper_id)
-        return []
     es = get_es()
     result = await es.search(
         index=settings.elastic_claims_index,

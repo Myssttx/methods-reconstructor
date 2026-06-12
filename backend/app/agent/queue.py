@@ -1,7 +1,6 @@
 import asyncio
 import json
 import uuid
-from collections import defaultdict
 
 import redis.asyncio as redis
 
@@ -11,9 +10,6 @@ from app.logging import get_logger
 
 log = get_logger(__name__)
 _redis_pool = None
-_local_history: dict[str, list[dict]] = defaultdict(list)
-_local_subscribers: dict[str, set[asyncio.Queue[dict | None]]] = defaultdict(set)
-_local_tasks: set[asyncio.Task] = set()
 
 JOB_HISTORY_TTL = 86400  # 24 hours
 
@@ -32,10 +28,6 @@ def get_redis() -> redis.Redis:
 
 
 async def enqueue(identifier: str) -> str:
-    settings = get_settings()
-    if settings.app_queue_mode == "local":
-        return await _enqueue_local(identifier)
-
     r = get_redis()
     job_id = str(uuid.uuid4())
     await r.lpush("job_queue", json.dumps({"job_id": job_id, "identifier": identifier}))
@@ -43,12 +35,6 @@ async def enqueue(identifier: str) -> str:
 
 
 async def subscribe(job_id: str):
-    settings = get_settings()
-    if settings.app_queue_mode == "local":
-        async for event in _subscribe_local(job_id):
-            yield event
-        return
-
     r = get_redis()
     pubsub = r.pubsub()
     # M-1 fix: subscribe BEFORE reading history so no events are dropped in the gap.
@@ -67,56 +53,6 @@ async def subscribe(job_id: str):
     finally:
         await pubsub.unsubscribe(f"job_events:{job_id}")
         await pubsub.close()
-
-
-async def _enqueue_local(identifier: str) -> str:
-    from app.agent.runner import AgentRunner
-
-    job_id = str(uuid.uuid4())
-    runner = AgentRunner(job_id, identifier)
-
-    def publish(event: AgentEvent) -> None:
-        ev_dict = event.model_dump()
-        _local_history[job_id].append(ev_dict)
-        for queue in list(_local_subscribers[job_id]):
-            try:
-                queue.put_nowait(ev_dict)
-            except asyncio.QueueFull:
-                log.warning("queue.local_subscriber_full", job_id=job_id)
-
-    runner._publish = publish
-
-    async def run_and_close() -> None:
-        try:
-            await runner.run()
-        finally:
-            for queue in list(_local_subscribers[job_id]):
-                queue.put_nowait(None)
-
-    task = asyncio.create_task(run_and_close())
-    _local_tasks.add(task)
-    task.add_done_callback(_local_tasks.discard)
-    return job_id
-
-
-async def _subscribe_local(job_id: str):
-    queue: asyncio.Queue[dict | None] = asyncio.Queue(maxsize=100)
-    _local_subscribers[job_id].add(queue)
-    try:
-        for event in _local_history.get(job_id, []):
-            yield event
-            if event.get("type") in {"complete", "error"}:
-                return
-
-        while True:
-            event = await queue.get()
-            if event is None:
-                return
-            yield event
-            if event.get("type") in {"complete", "error"}:
-                return
-    finally:
-        _local_subscribers[job_id].discard(queue)
 
 
 async def worker_loop():
