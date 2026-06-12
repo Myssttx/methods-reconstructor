@@ -21,6 +21,9 @@ async def index_paper(paper: Paper, sentences: list[dict[str, Any]]) -> None:
     match the dim configured in infra/elastic/papers_index.json.
     """
     settings = get_settings()
+    if not settings.enable_elastic:
+        log.info("paper.index.skip", reason="elastic_disabled", paper_id=paper.paper_id)
+        return
     es = get_es()
 
     methods_text = paper.methods_text()
@@ -53,6 +56,9 @@ async def index_paper(paper: Paper, sentences: list[dict[str, Any]]) -> None:
 
 async def get_paper(paper_id: str) -> dict[str, Any] | None:
     settings = get_settings()
+    if not settings.enable_elastic:
+        log.info("paper.get.skip", reason="elastic_disabled", paper_id=paper_id)
+        return None
     es = get_es()
     try:
         result = await es.get(index=settings.elastic_papers_index, id=paper_id)
@@ -63,6 +69,9 @@ async def get_paper(paper_id: str) -> dict[str, Any] | None:
 
 async def paper_exists(paper_id: str) -> bool:
     settings = get_settings()
+    if not settings.enable_elastic:
+        log.info("paper.exists.skip", reason="elastic_disabled", paper_id=paper_id)
+        return False
     es = get_es()
     return bool(await es.exists(index=settings.elastic_papers_index, id=paper_id))
 
@@ -103,6 +112,9 @@ async def find_paper_by_citation(citation: str) -> Paper | None:
     if not citation.strip():
         return None
     settings = get_settings()
+    if not settings.enable_elastic:
+        log.info("paper.citation_search.skip", reason="elastic_disabled")
+        return None
     es = get_es()
     result = await es.search(
         index=settings.elastic_papers_index,

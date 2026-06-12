@@ -45,6 +45,9 @@ def _load_mapping(name: str) -> dict:
 async def ensure_indexes() -> None:
     """Create papers + claims indexes if they don't already exist."""
     settings = get_settings()
+    if not settings.enable_elastic:
+        log.info("elastic.index.skip", reason="disabled")
+        return
     es = get_es()
 
     for index_name, file_stem in [

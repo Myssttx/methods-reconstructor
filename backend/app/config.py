@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     app_max_assembly_chars: int = 100_000
     app_max_queue_depth: int = 50  # C-5: max pending jobs in Redis queue
     app_negative_acquisition_cache_seconds: int = 3_600
+    app_queue_mode: Literal["redis", "local"] = "redis"
 
     # Auth (C-4: set API_KEY env var to enable X-API-Key protection)
     api_key: str = ""  # empty = open access (dev mode)
@@ -62,6 +63,7 @@ class Settings(BaseSettings):
     elastic_url: str = "http://localhost:9200"
     elastic_papers_index: str = "papers"
     elastic_claims_index: str = "claims"
+    enable_elastic: bool = True
 
     # Firestore
     firestore_database: str = "(default)"
